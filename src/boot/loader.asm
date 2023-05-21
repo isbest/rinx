@@ -113,7 +113,7 @@ error:
   call print
   hlt; cpu停机
   jmp $
-  .msg db "Loading Error!!!", 10, 13, 0
+  .msg: db "Loading Error!!!", 10, 13, 0
 
 [bits 32]
 protected_mode:
@@ -142,7 +142,7 @@ data_selector equ (2 << 3)
 ; 内存开始的地址
 memory_base equ 0
 ; 内存界限(4G / 4K) - 1
-memory_limit equ ((1024 * 1024 * 1024 * 4) / (1024 * 4)) -1
+memory_limit equ ((1024 * 1024 * 1024 * 4) / (1024 * 4)) - 1
 
 ; 全局描述符表指针
 gdt_ptr:
@@ -152,6 +152,10 @@ gdt_ptr:
   dd  gdt_base
 gdt_base:
   dd 0, 0; NULL 描述符
+
+; 定义变量
+gdt_mode_h_addr equ  0b_1100_0000 | (memory_limit >> 16) & 0xf
+
 ; 代码段
 gdt_code:
   dw memory_limit & 0xffff; 段界限的0-15位
@@ -160,7 +164,7 @@ gdt_code:
   ; 存在 dpl0, S 代码 非依从, 可读, 没有被访问过
   db 0b_1001_1010
   ; 4K 32位,不是64位 段界限的16-19位
-  db 0b_1100_0000 | (memory_limit >> 16) & 0xf
+  db gdt_mode_h_addr
   db (memory_base >> 24) & 0xff; 基地址24-31位
 
 ; 数据段
@@ -171,7 +175,7 @@ gdt_data:
   ; 存在 dpl0, S 数据 向上, 可写, 没有被访问过
   db 0b_1001_0010
   ; 4K 32位,不是64位 段界限的16-19位
-  db 0b_1100_0000 | (memory_limit >> 16) & 0xf
+  db gdt_mode_h_addr
   db (memory_base >> 24) & 0xff; 基地址24-31位
 gdt_end:
 

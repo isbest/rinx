@@ -174,7 +174,7 @@ error:
   call print
   hlt; cpu停机
   jmp $
-  .msg db "Booting Error!!!", 10, 13, 0
+  .msg: db "Booting Error!!!", 10, 13, 0
 
 ; 剩余字节填充0,第一个扇区512字节,去掉魔数还剩下510字节
 ; $是当前行代码的偏移地址, $$是当前段起始地址
