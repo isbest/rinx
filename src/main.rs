@@ -1,25 +1,20 @@
 #![no_std]
 #![no_main]
 
+mod vga_buffer;
+
 use core::arch::global_asm;
 use core::panic::PanicInfo;
 
 global_asm!(include_str!("entry.asm"));
 
-static HELLO: &[u8] = b"Hello World!";
-
 #[no_mangle]
 pub extern "C" fn rust_main() -> ! {
-    let vga_buffer = 0xb8000 as *mut u8;
-
     clear_bss();
 
-    for (i, &byte) in HELLO.iter().enumerate() {
-        unsafe {
-            *vga_buffer.offset(i as isize * 2) = byte;
-            *vga_buffer.offset(i as isize * 2 + 1) = 0xb;
-        }
-    }
+    println!("hello world!");
+    println!("this is rust kernel!!!");
+    println!("yes!!");
     loop {}
 }
 
