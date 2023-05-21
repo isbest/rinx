@@ -13,13 +13,13 @@ detect_memory:
   ; 结构体缓存位置
   mov ax, 0
   mov es, ax
-  mov edi, ards_buffer
+  mov edi, addrs_buffer
 
   mov edx, 0x534d4150; 固定签名 SMAP
   .next:
     ; 子功能号
     mov eax, 0xe820
-    ; ards 结构的大小
+    ; addrs 结构的大小
     mov ecx, 20
 
     ; 调用0x15系统调用
@@ -31,7 +31,7 @@ detect_memory:
     ; 将缓存指针指向下一个
     add di, cx
     ; 将结构体数量+1
-    inc word [ards_count]
+    inc word [addrs_count]
 
     ; 是0表示检测结束
     cmp ebx, 0
@@ -44,18 +44,18 @@ detect_memory:
   ;   xchg bx, bx
   ;   
   ;   ; 结构体数量
-  ;   mov cx, [ards_count]
+  ;   mov cx, [addrs_count]
   ;   ; 结构体指针
   ;   mov si, 0
   ; .show:
   ;   ; 解析结构体,基地址低32位
   ;   ; 0-4低32位 4-8 高32位
-  ;   mov eax, [ards_buffer + si]
+  ;   mov eax, [addrs_buffer + si]
   ;   ; 内存长度
   ;   ; 8-12 内存长度低32位, 12-16内存长度高12位
-  ;   mov ebx, [ards_buffer + si + 8]
+  ;   mov ebx, [addrs_buffer + si + 8]
   ;   ; 内存类型
-  ;   mov edx, [ards_buffer + si + 16]
+  ;   mov edx, [addrs_buffer + si + 16]
   ;   ; 指针+20 指向下一个结构体
   ;   add si, 20
   ;   xchg bx, bx
@@ -273,6 +273,6 @@ gdt_data:
   db (memory_base >> 24) & 0xff; 基地址24-31位
 gdt_end:
 
-ards_count:
+addrs_count:
   dw 0
-ards_buffer:
+addrs_buffer:

@@ -1,29 +1,20 @@
 BUILD:=../build
+RUST_KERNEL_OUT=../target/i386_32-rnix_os/debug
 SRC:=.
-ENTRYPOINT:=0x10000
 
 $(BUILD)/boot/%.bin: $(SRC)/boot/%.asm
 	$(shell mkdir -p $(dir $@))
 	nasm -f bin $< -o $@
 
-$(BUILD)/kernel/%.o: $(SRC)/kernel/%.asm
-	$(shell mkdir -p $(dir $@))
-	nasm -f elf32 $< -o $@
+$(RUST_KERNEL_OUT)/rnix: $(SRC)/main.rs
+	cargo build
 
-$(BUILD)/kernel/%.bin: $(BUILD)/kernel/start.o
-	$(shell mkdir -p $(dir $@))
-	ld -m elf_i386 -static $^ -o $@ -Ttext $(ENTRYPOINT)
-
-$(BUILD)/system.bin: $(BUILD)/kernel/kernel.bin
+$(BUILD)/system.bin: $(RUST_KERNEL_OUT)/rnix
 	objcopy -O binary $< $@
-
-$(BUILD)/system.map: $(BUILD)/kernel/kernel.bin
-	nm $< | sort > $@
 
 $(BUILD)/master.img: $(BUILD)/boot/boot.bin \
 					 $(BUILD)/boot/loader.bin \
-					 $(BUILD)/system.bin \
-					 $(BUILD)/system.map
+					 $(BUILD)/system.bin
 	yes | bximage -q -hd=16 -func=create -sectsize=512 -imgmode=flat $@
 	dd if=$(BUILD)/boot/boot.bin of=$@ bs=512 count=1 conv=notrunc
 	dd if=$(BUILD)/boot/loader.bin of=$@ bs=512 count=4 seek=2 conv=notrunc
@@ -32,6 +23,8 @@ $(BUILD)/master.img: $(BUILD)/boot/boot.bin \
 .PHONY: clean
 clean:
 	rm -rf $(BUILD)
+	rm -rf ../target
+	rm -rf *.ini
 
 .PHONY: bochs
 bochs: $(BUILD)/master.img
