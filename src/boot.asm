@@ -25,25 +25,17 @@ xchg bx, bx
 ; ecx 起始扇区
 ; bl 读取多少个扇区
 mov edi, 0x1000
-mov ecx, 0
-mov bl, 1
+mov ecx, 2
+mov bl, 4
 call read_disk
 
 xchg bx, bx
 
-; 写硬盘
-mov edi, 0x1000
-mov ecx, 2
-mov bl, 1
-call write_disk
+; 魔数校验
+cmp word [0x1000], 0x55aa
+jnz error
 
-xchg bx, bx
-
-mov edi, 0x1000
-mov ecx, 2
-mov bl, 1
-call read_disk
-xchg bx, bx
+jmp 0:0x1002
 
 ; 阻塞
 jmp $
@@ -82,21 +74,23 @@ read_disk:
 
   ; 设置起始扇区,中8位
   inc dx; 0x1F4 设置0-8位
-  shr eax, 8; eax右移8位
+  shr ecx, 8; eax右移8位
   mov al, cl; 起始扇区的高8位
   out dx, al; 写入前8位
 
   ; 设置起始扇区高8位
   inc dx; 0x1F5 设置0-8位
-  shr eax, 8; eax右移8位
+  shr ecx, 8; eax右移8位
   mov al, ch; 起始扇区的高8位
   out dx, al; 写入前8位
 
   ; 设置起始扇区高四位,及读取模式
   inc dx; 0x1F6
-  shr eax, 8
+  shr ecx, 8
   and cl, 0b0000_1111; 将高四位置为0
   mov al, 0b1110_0000; 5,6,7都是1,第6位表示LBA模式,第4位为0表示是主盘
+  ; 合并al,cl
+  or al, cl
   out dx, al
   
   ; 输出
@@ -118,9 +112,10 @@ read_disk:
     pop cx; 恢复cx
     loop .read
   ret 
+
   ; 等待数据准备完毕
   .read_waits:
-    mov dx, 0x1F7
+    mov dx, 0x1f7
     .read_check: ; 检查数据是否准备完毕
       in al, dx; 将数据读到al寄存器
       ; 做一些延时
@@ -140,7 +135,7 @@ read_disk:
 
   ; 将数据读到内存
   .read_to_mem:
-    mov dx, 0x1F0; 读数据的端口
+    mov dx, 0x1f0; 读数据的端口
     mov cx, 256; 一个扇区256个字
     .read_w:
       in ax, dx
@@ -155,93 +150,7 @@ read_disk:
       loop .read_w
     ret
 
-; 写硬盘,流程和读硬盘一样
-write_disk:
-  ;设置读写扇区数量
-  mov dx, 0x1f2;读取扇区数量的端口
-  mov al, bl; 获取读取扇区数的参数
-  out dx, al; 写入端口
-
-  ; 设置起始扇区,低8位
-  inc dx; 0x1F3 设置0-8位
-  mov al, cl; 起始扇区的中8位
-  out dx, al; 写入前8位
-
-  ; 设置起始扇区,中8位
-  inc dx; 0x1F4 设置0-8位
-  shr eax, 8; eax右移8位
-  mov al, cl; 起始扇区的高8位
-  out dx, al; 写入前8位
-
-  ; 设置起始扇区高8位
-  inc dx; 0x1F5 设置0-8位
-  shr eax, 8; eax右移8位
-  mov al, ch; 起始扇区的高8位
-  out dx, al; 写入前8位
-
-  ; 设置起始扇区高四位,及读取模式
-  inc dx; 0x1F6
-  shr eax, 8
-  and cl, 0b0000_1111; 将高四位置为0
-  mov al, 0b1110_0000; 5,6,7都是1,第6位表示LBA模式,第4位为0表示是主盘
-  out dx, al
-  
-  ; 输出
-  inc dx; 0x1F7
-  mov al, 0x30; 表示写硬盘
-  out dx, al
-
-  ; 清空ecx,为读取设置参数
-  xor ecx, ecx
-  mov cl, bl; 得到读写扇区的数量
-
-  ; 写磁盘主流程
-  ; 先写一个扇区
-  ; 然后等待写入完毕
-  .write:
-    push cx; 保存cx,下面的read_to_mem修改了cx
-    call .write_from_mem; 写一个扇区
-    call .write_waits; 等待硬盘繁忙结束
-    pop cx; 恢复cx
-    loop .write
-  ret 
-
-  ; 等待数据准备完毕
-  .write_waits:
-    mov dx, 0x1F7
-    .write_check: ; 检查数据是否准备完毕
-      in al, dx; 将数据读到al寄存器
-      ; 做一些延时
-      jmp $ + 2
-      jmp $ + 2
-      jmp $ + 2
-      ; 只获取第三位和第七位
-      ; 第三位表示数据是否准备完毕
-      ; 第七位表示硬盘是否忙
-      and al, 0b1000_0000;
-      ; 判断硬盘是否繁忙
-      cmp al, 0b0000_0000;
-      ; 没有写完就继续等待
-      jnz .write_check
-    ; 准备完毕,check返回,开始读硬盘
-    ret
-
-  ; 将数据读到内存
-  .write_from_mem:
-    mov dx, 0x1F0; 读数据的端口
-    mov cx, 256; 一个扇区256个字
-    .write_w: ;写数据,一次一个字
-      mov ax, [edi]
-      out dx, ax
-      ; 做一下延时
-      jmp $ + 2
-      jmp $ + 2
-      jmp $ + 2
-      ; 将edi挪动到下一个存放数据的地址
-      add edi, 2
-      loop .write_w
-    ret
-
+; 打印字符串
 print:
   mov ah, 0x0e
   .next:
@@ -257,12 +166,19 @@ print:
     inc si
     ; 回到next继续打印
     jmp .next
-  .done
+  .done:
     ; 函数返回
     ret 
 
 booting: 
   db "Booting Rnix...", 10, 13, 0; 10 \n 13 \r
+
+error:
+  mov si, .msg
+  call print
+  hlt; cpu停机
+  jmp $
+  .msg db "Booting Error!!!", 10, 13, 0
 
 ; 剩余字节填充0,第一个扇区512字节,去掉魔数还剩下510字节
 ; $是当前行代码的偏移地址, $$是当前段起始地址
