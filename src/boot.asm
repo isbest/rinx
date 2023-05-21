@@ -19,8 +19,6 @@ mov sp, 0x7c00
 mov si, booting
 call print
 
-; bochs 的魔术断点
-xchg bx, bx
 ; edi存储读取的数据放到目标内存地址
 ; ecx 起始扇区
 ; bl 读取多少个扇区
@@ -28,8 +26,6 @@ mov edi, 0x1000
 mov ecx, 2
 mov bl, 4
 call read_disk
-
-xchg bx, bx
 
 ; 魔数校验
 cmp word [0x1000], 0x55aa
