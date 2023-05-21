@@ -125,14 +125,108 @@ protected_mode:
   mov gs, ax
   mov ss, ax
 
-  mov esp, 0x10000; 修改栈顶
+  mov esp, 0x10000; 修改栈顶,向低地址增长
 
-  ; 保护模式可以随意操作4G的内存而无需修改段寄存器了
-  mov byte [0xb8000], 'P'
-  mov byte [0x200000], 'P'
+  ; 内核地址,向高低地址增长
+  mov edi, 0x10000
+  mov ecx, 10
+  mov bl, 200
+  call read_disk
+
+  ; 进入内核
+  jmp dword code_selector:0x10000
 
 ; 阻塞
 jmp $
+
+read_disk:
+  ;设置读写扇区数量
+  mov dx, 0x1f2;读取扇区数量的端口
+  mov al, bl; 获取读取扇区数的参数
+  out dx, al; 写入端口
+
+  ; 设置起始扇区,低8位
+  inc dx; 0x1F3 设置0-8位
+  mov al, cl; 起始扇区的中8位
+  out dx, al; 写入前8位
+
+  ; 设置起始扇区,中8位
+  inc dx; 0x1F4 设置0-8位
+  shr ecx, 8; eax右移8位
+  mov al, cl; 起始扇区的高8位
+  out dx, al; 写入前8位
+
+  ; 设置起始扇区高8位
+  inc dx; 0x1F5 设置0-8位
+  shr ecx, 8; eax右移8位
+  mov al, ch; 起始扇区的高8位
+  out dx, al; 写入前8位
+
+  ; 设置起始扇区高四位,及读取模式
+  inc dx; 0x1F6
+  shr ecx, 8
+  and cl, 0b0000_1111; 将高四位置为0
+  mov al, 0b1110_0000; 5,6,7都是1,第6位表示LBA模式,第4位为0表示是主盘
+  ; 合并al,cl
+  or al, cl
+  out dx, al
+
+  ; 输出
+  inc dx; 0x1F7
+  mov al, 0x20; 表示读硬盘
+  out dx, al
+
+  ; 清空ecx,为读取设置参数
+  xor ecx, ecx
+  mov cl, bl; 得到读写扇区的数量
+
+  ; 读取数据主流程
+  ; 先等待数据准备完毕
+  ; 然后去读取
+  .read:
+    push cx; 保存cx,下面的read_to_mem修改了cx
+    call .read_waits; 等待数据准备完毕
+    call .read_to_mem; 读取一个扇区
+    pop cx; 恢复cx
+    loop .read
+  ret
+
+  ; 等待数据准备完毕
+  .read_waits:
+    mov dx, 0x1f7
+    .read_check: ; 检查数据是否准备完毕
+      in al, dx; 将数据读到al寄存器
+      ; 做一些延时
+      jmp $ + 2
+      jmp $ + 2
+      jmp $ + 2
+      ; 只获取第三位和第七位
+      ; 第三位表示数据是否准备完毕
+      ; 第七位表示硬盘是否忙
+      and al, 0b1000_1000;
+      ; 判断数据是否准备完毕
+      cmp al, 0b0000_1000;
+      ; 没有准备完毕,继续空转cpu,直到准备完毕
+      jnz .read_check
+    ; 准备完毕,check返回,开始读硬盘
+    ret
+
+  ; 将数据读到内存
+  .read_to_mem:
+    mov dx, 0x1f0; 读数据的端口
+    mov cx, 256; 一个扇区256个字
+    .read_w:
+      in ax, dx
+      ; 做一下延时
+      jmp $ + 2
+      jmp $ + 2
+      jmp $ + 2
+      ; 将数据读到edi
+      mov [edi], ax
+      ; 将edi挪动到下一个存放数据的地址
+      add edi, 2
+      loop .read_w
+    ret
 
 ; 代码段选择子
 code_selector equ (1 << 3)
