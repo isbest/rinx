@@ -1,2 +1,5 @@
+.idea
 *.bin
 *.img
+build
+src/bx_enh_dbg.ini
