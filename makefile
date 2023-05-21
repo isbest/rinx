@@ -1,12 +1,13 @@
-BUILD:=../build
-RUST_KERNEL_OUT=../target/i386_32-rnix_os/debug
+BUILD:=./build
+RUST_KERNEL_OUT=./build/i386_32-rnix_os/debug
 SRC:=.
 
 $(BUILD)/boot/%.bin: $(SRC)/boot/%.asm
 	$(shell mkdir -p $(dir $@))
 	nasm -f bin $< -o $@
 
-$(RUST_KERNEL_OUT)/rnix: $(SRC)/main.rs
+
+$(RUST_KERNEL_OUT)/rnix: $(SRC)/src/main.rs
 	cargo build
 
 $(BUILD)/system.bin: $(RUST_KERNEL_OUT)/rnix
@@ -19,11 +20,10 @@ $(BUILD)/master.img: $(BUILD)/boot/boot.bin \
 	dd if=$(BUILD)/boot/boot.bin of=$@ bs=512 count=1 conv=notrunc
 	dd if=$(BUILD)/boot/loader.bin of=$@ bs=512 count=4 seek=2 conv=notrunc
 	dd if=$(BUILD)/system.bin of=$@ bs=512 count=200 seek=10 conv=notrunc
-
 .PHONY: clean
 clean:
 	rm -rf $(BUILD)
-	rm -rf ../target
+	rm -rf ./target
 	rm -rf *.ini
 
 .PHONY: bochs
