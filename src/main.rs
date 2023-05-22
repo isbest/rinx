@@ -16,6 +16,10 @@ pub extern "C" fn rust_main() -> ! {
     println!("this is rust kernel!!!");
     println!("yes!!");
     print!("hello");
+    print!("\x7f");
+    println!("world");
+    print!("world");
+    print!("\x0D");
     loop {}
 }
 
