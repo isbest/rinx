@@ -32,7 +32,7 @@ pub enum Color {
 /// vga buffer color foreground color and background color
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct VgaColor(u8);
+pub struct VgaColor(u8);
 
 impl VgaColor {
     fn new(foreground: Color, background: Color) -> VgaColor {
@@ -46,7 +46,6 @@ impl From<VgaColor> for u8 {
     }
 }
 
-
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct VgaChar {
@@ -55,16 +54,16 @@ struct VgaChar {
 }
 
 impl Deref for VgaChar {
-    type Target = u8;
+    type Target = VgaChar;
 
     fn deref(&self) -> &Self::Target {
-        &self.ascii_chara
+        &self
     }
 }
 
 impl DerefMut for VgaChar {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.ascii_chara
+        &mut (*self)
     }
 }
 
@@ -105,7 +104,7 @@ impl Writer {
                 let col = self.column_position;
                 let color_code = self.color_code;
                 // 写入字符
-                self.buffer.chars[row][col].write(*VgaChar {
+                self.buffer.chars[row][col].write(VgaChar {
                     ascii_chara: byte,
                     color_code,
                 });
@@ -151,7 +150,7 @@ impl Writer {
         };
 
         for col in 0..BUFFER_WIDTH {
-            self.buffer.chars[row][col].write(*blank);
+            self.buffer.chars[row][col].write(blank);
         }
     }
 }
@@ -186,5 +185,12 @@ macro_rules! print {
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
+    WRITER.lock().write_fmt(args).unwrap();
+}
+
+#[doc(hidden)]
+pub fn _print_with_color(args: fmt::Arguments, color: VgaColor) {
+    use core::fmt::Write;
+    WRITER.lock().color_code = color;
     WRITER.lock().write_fmt(args).unwrap();
 }

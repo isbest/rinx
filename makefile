@@ -7,7 +7,7 @@ $(BUILD)/boot/%.bin: $(SRC)/boot/%.asm
 	nasm -f bin $< -o $@
 
 
-$(RUST_KERNEL_OUT)/rnix: $(SRC)/src/main.rs
+$(RUST_KERNEL_OUT)/rnix: $(SRC)/src/*.rs
 	cargo build
 
 $(BUILD)/system.bin: $(RUST_KERNEL_OUT)/rnix
@@ -28,4 +28,18 @@ clean:
 
 .PHONY: bochs
 bochs: $(BUILD)/master.img
-	bochs -q
+
+.PHONY: qemu
+qemu: $(BUILD)/master.img
+	qemu-system-i386 \
+		-m 32M \
+		-boot c \
+		-hda $<
+
+.PHONY: qemu-gdb
+qemu-gdb: $(BUILD)/master.img
+	qemu-system-i386 \
+		-s -S \
+		-m 32M \
+		-boot c \
+		-hda $<
