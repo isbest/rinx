@@ -9,3 +9,4 @@ edition = "2021"
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 spin = "0.9.8"
 volatile = "0.4.6"
+x86 = "0.52.0"

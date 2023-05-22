@@ -7,7 +7,7 @@ $(BUILD)/boot/%.bin: $(SRC)/boot/%.asm
 	nasm -f bin $< -o $@
 
 
-$(RUST_KERNEL_OUT)/rnix: $(SRC)/src/*.rs
+$(RUST_KERNEL_OUT)/rnix: $(SRC)/src/*.rs $(SRC)/i386_32-rnix_os.json
 	cargo build
 
 $(BUILD)/system.bin: $(RUST_KERNEL_OUT)/rnix
