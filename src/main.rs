@@ -1,7 +1,12 @@
 #![no_std]
 #![no_main]
+#![allow(dead_code)]
+
+extern crate alloc;
 
 mod drivers;
+mod console;
+mod mm;
 
 use core::arch::global_asm;
 use core::panic::PanicInfo;
