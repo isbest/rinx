@@ -1,5 +1,5 @@
 BUILD:=./build
-RUST_KERNEL_OUT=./build/i386_32-rnix_os/debug
+RUST_KERNEL_OUT=./build/x86-rnix_os/debug
 SRC:=.
 
 $(BUILD)/boot/%.bin: $(SRC)/boot/%.asm
@@ -7,7 +7,7 @@ $(BUILD)/boot/%.bin: $(SRC)/boot/%.asm
 	nasm -f bin $< -o $@
 
 
-$(RUST_KERNEL_OUT)/rnix: $(SRC)/src/*.rs $(SRC)/i386_32-rnix_os.json
+$(RUST_KERNEL_OUT)/rnix: $(SRC)/src/*.rs $(SRC)/x86-rnix_os.json
 	cargo build
 
 $(BUILD)/system.bin: $(RUST_KERNEL_OUT)/rnix
