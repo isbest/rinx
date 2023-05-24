@@ -6,7 +6,7 @@ $(BUILD)/boot/%.bin: $(SRC)/boot/%.asm
 	$(shell mkdir -p $(dir $@))
 	nasm -f bin $< -o $@
 
-.PHONY: qemu
+.PHONY: $(RUST_KERNEL_OUT)/rnix
 $(RUST_KERNEL_OUT)/rnix: $(SRC)/x86-rnix_os.json
 	cargo build
 
