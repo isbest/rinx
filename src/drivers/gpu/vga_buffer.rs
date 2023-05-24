@@ -39,47 +39,6 @@ pub enum Color {
     White = 15,
 }
 
-/// 常见的控制字符
-#[repr(u8)]
-#[allow(dead_code)]
-#[derive(Debug)]
-pub enum CTLChar {
-    NUL = 0x00,
-    BEL = 0x07,
-    BS = 0x08,
-    HT = 0x09,
-    LF = 0x0A,
-    VT = 0x0B,
-    FF = 0x0C,
-    CR = 0x0D,
-    DEL = 0x7F,
-    ESC = 0x1B,
-}
-
-impl CTLChar {
-    fn from_byte(byte: u8) -> Option<CTLChar> {
-        match byte {
-            0x00 => Some(CTLChar::NUL),
-            0x07 => Some(CTLChar::BEL),
-            0x08 => Some(CTLChar::BS),
-            0x09 => Some(CTLChar::HT),
-            0x0A => Some(CTLChar::LF),
-            0x0B => Some(CTLChar::VT),
-            0x0C => Some(CTLChar::FF),
-            0x0D => Some(CTLChar::CR),
-            0x7F => Some(CTLChar::DEL),
-            0x1B => Some(CTLChar::ESC),
-            _ => None,
-        }
-    }
-}
-
-impl From<CTLChar> for u8 {
-    fn from(value: CTLChar) -> Self {
-        value as u8
-    }
-}
-
 /// vga buffer color foreground color and background color
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -157,65 +116,33 @@ impl Writer {
         let col = self.col_position;
         let color_code = self.color_code;
 
-        if let Some(ctl_char) = CTLChar::from_byte(byte) {
-            match ctl_char {
-                // NUL
-                CTLChar::NUL => {}
-                // 蜂鸣
-                CTLChar::BEL => {
-                    todo!()
+        match byte {
+            b'\n' => self.new_line(),
+            byte => {
+                if self.col_position >= BUFFER_WIDTH {
+                    self.new_line()
                 }
-                // 删除一个字符
-                CTLChar::BS => {
-                    if col > 0 {
-                        self.col_position -= 1;
-                        self.cursor_position -= 1;
-                        self.clear_pos(self.row_position, self.col_position);
-                    }
-                }
-                // tab
-                CTLChar::HT => {}
-                CTLChar::LF => {
-                    self.new_line();
-                }
-                CTLChar::VT => {}
-                // 换行
-                CTLChar::FF => {
-                    self.new_line();
-                }
-                // 光标回到初始位置
-                CTLChar::CR => {
-                    self.cursor_position -= self.col_position as u16;
-                    self.col_position = 0;
-                }
-                // 删除当前字符
-                CTLChar::DEL => {
-                    self.clear_pos(self.row_position, self.col_position - 1);
-                }
-                // ESC
-                CTLChar::ESC => {}
-            }
-        } else {
-            if self.col_position >= BUFFER_WIDTH {
-                self.new_line()
-            }
-            // 写入字符
-            self.buffer.chars[row][col].write(VgaChar {
-                ascii_chara: byte,
-                color_code,
-            });
-            // 维护指针索引+1
-            self.col_position += 1;
-        }
+                // 写入字符
+                self.buffer.chars[row][col].write(VgaChar {
+                    ascii_chara: byte,
+                    color_code,
+                });
+                // 维护指针索引+1
+                self.col_position += 1;
 
-        // 更新指针
-        self.update_cursor();
+                // 更新指针
+                self.update_cursor();
+            }
+        }
     }
 
     /// 打印字符串,不可见字符统一用0xfe代替
     pub fn write_string(&mut self, s: &str) {
         for byte in s.bytes() {
-            self.write_byte(byte);
+            match byte {
+                0x20..=0x7e | b'\n' => self.write_byte(byte),
+                _ => self.write_byte(0xfe),
+            }
         }
     }
 
@@ -249,15 +176,6 @@ impl Writer {
         for col in 0..BUFFER_WIDTH {
             self.buffer.chars[row][col].write(blank);
         }
-    }
-
-    fn clear_pos(&mut self, row: usize, col: usize) {
-        let blank = VgaChar {
-            ascii_chara: b' ',
-            color_code: self.color_code,
-        };
-
-        self.buffer.chars[row][col].write(blank);
     }
 
     fn update_cursor(&mut self) {
@@ -300,18 +218,11 @@ macro_rules! println {
 
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => ($crate::vga_buffer::_print(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::drivers::gpu::vga_buffer::_print(format_args!($($arg)*)));
 }
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
-    WRITER.lock().write_fmt(args).unwrap();
-}
-
-#[doc(hidden)]
-pub fn _print_with_color(args: fmt::Arguments, color: VgaColor) {
-    use core::fmt::Write;
-    WRITER.lock().color_code = color;
     WRITER.lock().write_fmt(args).unwrap();
 }

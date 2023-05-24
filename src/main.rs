@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-mod vga_buffer;
+mod drivers;
 
 use core::arch::global_asm;
 use core::panic::PanicInfo;
