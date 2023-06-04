@@ -11,6 +11,6 @@ pub fn init_heap() {
     unsafe {
         ALLOCATOR
             .lock()
-            .init(0x20000 as *mut u8, KERNEL_HEAP_SIZE);
+            .init(0x10000 as *mut u8, KERNEL_HEAP_SIZE);
     }
 }

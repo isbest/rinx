@@ -31,7 +31,7 @@ detect_memory:
     ; 将缓存指针指向下一个
     add di, cx
     ; 将结构体数量+1
-    inc word [addrs_count]
+    inc dword [addrs_count]
 
     ; 是0表示检测结束
     cmp ebx, 0
@@ -63,7 +63,7 @@ detect_memory:
   ;   loop .show
 
 ; 进入保护模式的准备
-jmp prepare_protected_mode
+    jmp prepare_protected_mode
 
 prepare_protected_mode:
   cli; 关闭中断
@@ -132,6 +132,9 @@ protected_mode:
   mov ecx, 10
   mov bl, 200
   call read_disk
+
+  mov eax, 0x20230604; 内核魔数
+  mov ebx, addrs_count; 内存数量指针
 
   ; 进入内核
   jmp dword code_selector:0x10000
@@ -273,6 +276,7 @@ gdt_data:
   db (memory_base >> 24) & 0xff; 基地址24-31位
 gdt_end:
 
+section .data
 addrs_count:
-  dw 0
+  dd 0
 addrs_buffer:

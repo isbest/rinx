@@ -15,20 +15,13 @@ global_asm!(include_str!("entry.asm"));
 
 #[no_mangle]
 pub extern "C" fn rust_main() -> ! {
-    clear_bss();
-
     println!("hello world!");
     println!("this is rust kernel!!!");
-    println!("yes!!");
-    print!("hello");
-    print!("\x7f");
-    println!("world");
-    print!("world");
-    print!("\x0D");
     loop {}
 }
 
 // 清空bss段
+#[no_mangle]
 fn clear_bss() {
     extern "C" {
         fn sbss();
@@ -38,7 +31,7 @@ fn clear_bss() {
         unsafe {
             (bytes as *mut u8).write_volatile(0);
         }
-    })
+    });
 }
 
 #[panic_handler]
