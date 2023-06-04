@@ -1,6 +1,6 @@
 use core::slice;
 
-use crate::println;
+use crate::{print, println};
 
 const KERNEL_MAGIC: u32 = 0x20230604;
 const MEMORY_BASE: u64 = 0x100000;
@@ -49,10 +49,10 @@ pub unsafe fn memory_init(kernel_magic: u32, addrs_count: *const u32) {
             memory_base = addr.base;
             memory_size = addr.size;
         }
-        println!("base:{:0>10x}, size:{:0>10x}, type:{}", addr.base, addr.size, addr.state);
+        println!("base:0x{:0>8X}, size:0x{:0>8X}, type:{}", addr.base, addr.size, addr.state);
     }
-
-    println!("\nbase:{:0>10x}, size:{:0>10x}", memory_base, memory_size);
+    print!("\n");
+    println!("base:0x{:0>8X}, size:0x{:0>8X}", memory_base, memory_size);
     println!("Ards count: {}", count);
     println!("Total pages: {}", page_idx(memory_base) + page_idx(memory_size));
     println!("Free pages: {}\n", page_idx(memory_size));
