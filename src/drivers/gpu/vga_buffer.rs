@@ -1,7 +1,9 @@
 //! this is a simple vga buffer driver
 
+use alloc::vec::Vec;
 use core::fmt;
 use core::ops::{Deref, DerefMut};
+use csi_parser::iter::{CsiParser, Output};
 use lazy_static::lazy_static;
 use spin::Mutex;
 use volatile::Volatile;
@@ -39,6 +41,31 @@ pub enum Color {
     White = 15,
 }
 
+impl From<usize> for Color {
+    fn from(value: usize) -> Self {
+        match value {
+            30 => Color::Black,
+            31 => Color::Red,
+            32 => Color::Green,
+            33 => Color::Cyan,
+            34 => Color::Blue,
+            35 => Color::Magenta,
+            36 => Color::Brown,
+            37 => Color::LightGray,
+            38 => Color::DarkGray,
+            39 => Color::LightBlue,
+            40 => Color::LightGreen,
+            41 => Color::LightCyan,
+            42 => Color::LightRed,
+            43 => Color::Pink,
+            44 => Color::Yellow,
+            45 => Color::White,
+            // fallback to black
+            _ => Color::Black,
+        }
+    }
+}
+
 /// vga buffer color foreground color and background color
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -67,7 +94,7 @@ impl Deref for VgaChar {
     type Target = VgaChar;
 
     fn deref(&self) -> &Self::Target {
-        &self
+        self
     }
 }
 
@@ -203,8 +230,29 @@ impl Writer {
 }
 
 impl fmt::Write for Writer {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.write_string(s);
+    fn write_str(&mut self, text: &str) -> fmt::Result {
+        let output: Vec<Output> = text.csi_parser().collect();
+        if output.is_empty() {
+            self.write_string(text);
+        } else {
+            for out in output {
+                use csi_parser::enums::CSISequence;
+                match out {
+                    Output::Text(pure) => { self.write_string(pure) }
+                    Output::Escape(csi_seq) => {
+                        if let CSISequence::Color(fg, bg, _) = csi_seq {
+                            if fg.is_some() {
+                                let fg = unsafe { fg.unwrap_unchecked() };
+                                self.color_code = VgaColor::new(Color::from(fg), Color::from(bg.unwrap_or(0)));
+                            } else {
+                                // 前景色不存在,则fallback到默认颜色
+                                self.color_code = VgaColor::new(Color::Yellow, Color::Black)
+                            }
+                        }
+                    }
+                }
+            }
+        }
         Ok(())
     }
 }

@@ -5,7 +5,6 @@
 extern crate alloc;
 
 mod drivers;
-mod console;
 mod mm;
 mod gdt;
 

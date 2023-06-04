@@ -1,7 +1,7 @@
 use alloc::vec;
 use core::slice;
 
-use crate::{print, println};
+use crate::println;
 use crate::mm::heap_allocator::init_heap;
 
 const KERNEL_MAGIC: u32 = 0x20230604;
@@ -51,13 +51,7 @@ pub unsafe fn memory_init(kernel_magic: u32, addrs_count: *const u32) {
             memory_base = addr.base;
             memory_size = addr.size;
         }
-        println!("base:0x{:0>8X}, size:0x{:0>8X}, type:{}", addr.base, addr.size, addr.state);
     }
-    print!("\n");
-    println!("base:0x{:0>8X}, size:0x{:0>8X}", memory_base, memory_size);
-    println!("Ards count: {}", count);
-    println!("Total pages: {}", page_idx(memory_base) + page_idx(memory_size));
-    println!("Free pages: {}\n", page_idx(memory_size));
 
     // 起始地址必须是1M
     assert_eq!(memory_base, MEMORY_BASE);
@@ -67,7 +61,12 @@ pub unsafe fn memory_init(kernel_magic: u32, addrs_count: *const u32) {
     // 初始化内存分配器
     init_heap(memory_base, memory_size as usize);
 
-    let vec = vec![1,2,3];
+    println!("base:0x{:0>8X}, size:0x{:0>8X}", memory_base, memory_size);
+    println!("Ards count: {}", count);
+    println!("Total pages: {}", page_idx(memory_base) + page_idx(memory_size));
+    println!("\x1b[31;33;0mFree pages: {}\n\x1b[31m", page_idx(memory_size));
+
+    let vec = vec![1, 2, 3];
     for num in vec {
         println!("{num}");
     }
