@@ -7,6 +7,7 @@ extern crate alloc;
 mod drivers;
 mod console;
 mod mm;
+mod gdt;
 
 use core::arch::global_asm;
 use core::panic::PanicInfo;

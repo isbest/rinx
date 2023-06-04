@@ -112,15 +112,18 @@ impl Writer {
 
     /// 按字节写入
     pub fn write_byte(&mut self, byte: u8) {
-        let row = self.row_position;
-        let col = self.col_position;
+        let mut row = self.row_position;
+        let mut col = self.col_position;
         let color_code = self.color_code;
 
         match byte {
             b'\n' => self.new_line(),
             byte => {
-                if self.col_position >= BUFFER_WIDTH {
-                    self.new_line()
+                // auto wrap 自动换行逻辑
+                if self.col_position > BUFFER_WIDTH - 1 {
+                    self.new_line();
+                    row = self.row_position;
+                    col = self.col_position;
                 }
                 // 写入字符
                 self.buffer.chars[row][col].write(VgaChar {
@@ -164,6 +167,7 @@ impl Writer {
 
         // 字符指针归位
         self.col_position = 0;
+        self.update_cursor();
     }
 
     /// 清空某一行
