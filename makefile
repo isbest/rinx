@@ -6,6 +6,10 @@ $(BUILD)/boot/%.bin: $(SRC)/boot/%.asm
 	$(shell mkdir -p $(dir $@))
 	nasm -f bin $< -o $@
 
+$(BUILD)/boot/loader.bin: $(SRC)/boot/loader.asm $(BUILD)/system.bin
+	$(shell mkdir -p $(dir $@))
+	nasm -f bin $< -o $@ -DKERNEL_SIZE=$$(stat -c%s "$(BUILD)/system.bin")
+
 .PHONY: $(RUST_KERNEL_OUT)/rnix
 $(RUST_KERNEL_OUT)/rnix: $(SRC)/x86-rnix_os.json
 	cargo build
@@ -19,8 +23,8 @@ $(BUILD)/master.img: $(BUILD)/boot/boot.bin \
 	yes | bximage -q -hd=16 -func=create -sectsize=512 -imgmode=flat $@
 	dd if=$(BUILD)/boot/boot.bin of=$@ bs=512 count=1 conv=notrunc
 	dd if=$(BUILD)/boot/loader.bin of=$@ bs=512 count=4 seek=2 conv=notrunc
-	test -n "$$(find $(BUILD)/system.bin -size -100k)"
-	dd if=$(BUILD)/system.bin of=$@ bs=512 count=200 seek=10 conv=notrunc
+	test -n "$$(find $(BUILD)/system.bin -size -500k)"
+	dd if=$(BUILD)/system.bin of=$@ bs=512 count=1000 seek=10 conv=notrunc
 .PHONY: clean
 clean:
 	rm -rf $(BUILD)

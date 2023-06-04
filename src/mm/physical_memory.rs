@@ -1,6 +1,8 @@
+use alloc::vec;
 use core::slice;
 
 use crate::{print, println};
+use crate::mm::heap_allocator::init_heap;
 
 const KERNEL_MAGIC: u32 = 0x20230604;
 const MEMORY_BASE: u64 = 0x100000;
@@ -60,5 +62,13 @@ pub unsafe fn memory_init(kernel_magic: u32, addrs_count: *const u32) {
     // 起始地址必须是1M
     assert_eq!(memory_base, MEMORY_BASE);
     // 必须是4K对齐
-    assert_eq!(memory_size & ALIGN_MASK, 0)
+    assert_eq!(memory_size & ALIGN_MASK, 0);
+
+    // 初始化内存分配器
+    init_heap(memory_base, memory_size as usize);
+
+    let vec = vec![1,2,3];
+    for num in vec {
+        println!("{num}");
+    }
 }
