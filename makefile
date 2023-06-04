@@ -33,6 +33,7 @@ clean:
 
 .PHONY: bochs
 bochs: $(BUILD)/master.img
+	bochs -q
 
 .PHONY: qemu
 qemu: $(BUILD)/master.img
