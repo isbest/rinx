@@ -64,7 +64,7 @@ pub unsafe fn memory_init(kernel_magic: u32, addrs_count: *const u32) {
     println!("base:0x{:0>8X}, size:0x{:0>8X}", memory_base, memory_size);
     println!("Ards count: {}", count);
     println!("Total pages: {}", page_idx(memory_base) + page_idx(memory_size));
-    println!("\x1b[31;33;0mFree pages: {}\n\x1b[31m", page_idx(memory_size));
+    println!("\x1b[43;33;0mFree pages: {}\n\x1b[31m", page_idx(memory_size));
 
     let vec = vec![1, 2, 3];
     for num in vec {

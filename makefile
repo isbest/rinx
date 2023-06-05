@@ -45,7 +45,7 @@ qemu: $(BUILD)/master.img
 .PHONY: qemu-gdb
 qemu-gdb: $(BUILD)/master.img
 	qemu-system-i386 \
-		-s -S \
+		-gdb tcp::9001 -S \
 		-m 32M \
 		-boot c \
 		-hda $<
