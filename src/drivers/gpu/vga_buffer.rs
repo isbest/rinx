@@ -77,6 +77,12 @@ impl VgaColor {
     }
 }
 
+impl Default for VgaColor {
+    fn default() -> Self {
+        VgaColor::new(Color::Yellow, Color::Black)
+    }
+}
+
 impl From<VgaColor> for u8 {
     fn from(value: VgaColor) -> Self {
         value.0
@@ -127,7 +133,7 @@ impl Writer {
             col_position: 0,
             row_position: 0,
             cursor_position: 0,
-            color_code: VgaColor::new(Color::Yellow, Color::Black),
+            color_code: VgaColor::default(),
             buffer: unsafe { &mut *(VGA_BUFFER_ADDR as *mut VgaBuffer) },
         };
 
@@ -238,7 +244,7 @@ impl fmt::Write for Writer {
             for out in output {
                 use csi_parser::enums::CSISequence;
                 match out {
-                    Output::Text(pure) => { self.write_string(pure) }
+                    Output::Text(pure_text) => { self.write_string(pure_text); }
                     Output::Escape(csi_seq) => {
                         if let CSISequence::Color(fg, bg, _) = csi_seq {
                             if fg.is_some() {
@@ -246,9 +252,9 @@ impl fmt::Write for Writer {
                                 self.color_code = VgaColor::new(Color::from(fg), Color::from(bg.unwrap_or(0)));
                             } else {
                                 // 前景色不存在,则fallback到默认颜色
-                                self.color_code = VgaColor::new(Color::Yellow, Color::Black)
+                                self.color_code = VgaColor::default();
                             }
-                        }
+                        };
                     }
                 }
             }
