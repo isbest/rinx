@@ -39,13 +39,11 @@ bochs: $(BUILD)/master.img
 qemu: $(BUILD)/master.img
 	qemu-system-i386 \
 		-m 32M \
-		-boot c \
-		-hda $<
+		-drive file=$(BUILD)/master.img,if=ide,index=0,media=disk,format=raw
 
 .PHONY: qemu-gdb
 qemu-gdb: $(BUILD)/master.img
 	qemu-system-i386 \
 		-gdb tcp::9001 -S \
 		-m 32M \
-		-boot c \
-		-hda $<
+		-drive file=$(BUILD)/master.img,if=ide,index=0,media=disk,format=raw
