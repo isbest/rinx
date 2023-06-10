@@ -7,6 +7,5 @@
   push eax
 
   call clear_bss
-  call init_gdt
   call memory_init
   call rust_main

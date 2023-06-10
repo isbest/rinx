@@ -5,16 +5,19 @@
 extern crate alloc;
 
 mod drivers;
+mod kernel;
 mod mm;
-mod gdt;
 
 use core::arch::global_asm;
 use core::panic::PanicInfo;
+
+use crate::kernel::gdt::init_gdt;
 
 global_asm!(include_str!("entry.asm"));
 
 #[no_mangle]
 pub extern "C" fn rust_main() -> ! {
+    init_gdt();
     println!("hello world!");
     println!("this is rust kernel!!!");
     loop {}
@@ -27,10 +30,8 @@ fn clear_bss() {
         fn sbss();
         fn ebss();
     }
-    (sbss as usize..ebss as usize).for_each(|bytes| {
-        unsafe {
-            (bytes as *mut u8).write_volatile(0);
-        }
+    (sbss as usize..ebss as usize).for_each(|bytes| unsafe {
+        (bytes as *mut u8).write_volatile(0);
     });
 }
 

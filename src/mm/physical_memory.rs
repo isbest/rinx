@@ -1,8 +1,7 @@
-use alloc::vec;
 use core::slice;
 
-use crate::println;
 use crate::mm::heap_allocator::init_heap;
+use crate::println;
 
 const KERNEL_MAGIC: u32 = 0x20230604;
 const MEMORY_BASE: u64 = 0x100000;
@@ -11,9 +10,9 @@ const ALIGN_MASK: u64 = 0xfff;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Ards {
-    base: u64,
-    size: u64,
-    state: u32,
+    pub base: u64,
+    pub size: u64,
+    pub state: u32,
 }
 
 impl Ards {
@@ -63,11 +62,12 @@ pub unsafe fn memory_init(kernel_magic: u32, addrs_count: *const u32) {
 
     println!("base:0x{:0>8X}, size:0x{:0>8X}", memory_base, memory_size);
     println!("Ards count: {}", count);
-    println!("Total pages: {}", page_idx(memory_base) + page_idx(memory_size));
-    println!("\x1b[43;33;0mFree pages: {}\n\x1b[31m", page_idx(memory_size));
-
-    let vec = vec![1, 2, 3];
-    for num in vec {
-        println!("{num}");
-    }
+    println!(
+        "Total pages: {}",
+        page_idx(memory_base) + page_idx(memory_size)
+    );
+    println!(
+        "\x1b[43;33;0mFree pages: {}\n\x1b[31m",
+        page_idx(memory_size)
+    );
 }

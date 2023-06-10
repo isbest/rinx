@@ -221,7 +221,10 @@ impl Writer {
             outb(VGA_INDEX_REGISTER, 0x0F);
             outb(VGA_DATA_REGISTER, (self.cursor_position & 0xFF) as u8);
             outb(VGA_INDEX_REGISTER, 0x0E);
-            outb(VGA_DATA_REGISTER, ((self.cursor_position >> 8) & 0xFF) as u8);
+            outb(
+                VGA_DATA_REGISTER,
+                ((self.cursor_position >> 8) & 0xFF) as u8,
+            );
         }
     }
 
@@ -244,12 +247,15 @@ impl fmt::Write for Writer {
             for out in output {
                 use csi_parser::enums::CSISequence;
                 match out {
-                    Output::Text(pure_text) => { self.write_string(pure_text); }
+                    Output::Text(pure_text) => {
+                        self.write_string(pure_text);
+                    }
                     Output::Escape(csi_seq) => {
                         if let CSISequence::Color(fg, bg, _) = csi_seq {
                             if fg.is_some() {
                                 let fg = unsafe { fg.unwrap_unchecked() };
-                                self.color_code = VgaColor::new(Color::from(fg), Color::from(bg.unwrap_or(0)));
+                                self.color_code =
+                                    VgaColor::new(Color::from(fg), Color::from(bg.unwrap_or(0)));
                             } else {
                                 // 前景色不存在,则fallback到默认颜色
                                 self.color_code = VgaColor::default();
