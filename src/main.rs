@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 #![allow(dead_code)]
+#![feature(core_intrinsics)]
 
 extern crate alloc;
 
@@ -10,29 +11,24 @@ mod mm;
 
 use core::arch::global_asm;
 use core::panic::PanicInfo;
-
+use log::{debug, error, info, trace, warn};
 use crate::kernel::gdt::init_gdt;
+use crate::kernel::logger::init_logger;
 
 global_asm!(include_str!("entry.asm"));
 
 #[no_mangle]
 pub extern "C" fn rust_main() -> ! {
+    init_logger();
     init_gdt();
-    println!("hello world!");
-    println!("this is rust kernel!!!");
-    loop {}
-}
+    info!("hello, this is rust kernel");
+    debug!("hello, this is rust kernel");
+    warn!("hello, this is rust kernel");
+    error!("hello, this is rust kernel");
+    trace!("hello, this is rust kernel");
 
-// 清空bss段
-#[no_mangle]
-fn clear_bss() {
-    extern "C" {
-        fn sbss();
-        fn ebss();
-    }
-    (sbss as usize..ebss as usize).for_each(|bytes| unsafe {
-        (bytes as *mut u8).write_volatile(0);
-    });
+    #[allow(clippy::empty_loop)]
+    loop {}
 }
 
 #[panic_handler]

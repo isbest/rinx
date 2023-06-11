@@ -29,39 +29,41 @@ pub enum Color {
     Cyan = 3,
     Red = 4,
     Magenta = 5,
-    Brown = 6,
-    LightGray = 7,
-    DarkGray = 8,
-    LightBlue = 9,
-    LightGreen = 10,
-    LightCyan = 11,
-    LightRed = 12,
-    Pink = 13,
-    Yellow = 14,
-    White = 15,
+    Yellow = 6,
+    White = 7,
+    BrightBlack = 8,
+    BrightBlue = 9,
+    BrightGreen = 10,
+    BrightCyan = 11,
+    BrightRed = 12,
+    BrightMagenta = 13,
+    BrightYellow = 14,
+    BrightWhite = 15,
 }
 
+/// Reference https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
 impl From<usize> for Color {
     fn from(value: usize) -> Self {
         match value {
-            30 => Color::Black,
-            31 => Color::Red,
-            32 => Color::Green,
-            33 => Color::Cyan,
-            34 => Color::Blue,
-            35 => Color::Magenta,
-            36 => Color::Brown,
-            37 => Color::LightGray,
-            38 => Color::DarkGray,
-            39 => Color::LightBlue,
-            40 => Color::LightGreen,
-            41 => Color::LightCyan,
-            42 => Color::LightRed,
-            43 => Color::Pink,
-            44 => Color::Yellow,
-            45 => Color::White,
-            // fallback to black
-            _ => Color::Black,
+            30 | 40 => Color::Black,
+            31 | 41 => Color::Red,
+            32 | 42 => Color::Green,
+            33 | 43 => Color::Yellow,
+            34 | 44 => Color::Blue,
+            35 | 45 => Color::Magenta,
+            36 | 46 => Color::Cyan,
+            37 | 47 => Color::White,
+            90 | 100 => Color::BrightBlack,
+            91 | 101 => Color::BrightRed,
+            92 | 102 => Color::BrightGreen,
+            93 | 103 => Color::BrightYellow,
+            94 | 104 => Color::BrightBlue,
+            95 | 105 => Color::BrightMagenta,
+            96 | 106 => Color::BrightCyan,
+            97 | 107 => Color::BrightWhite,
+            0 => Color::Black,
+            // fallback to white
+            _ => Color::White,
         }
     }
 }
@@ -79,7 +81,7 @@ impl VgaColor {
 
 impl Default for VgaColor {
     fn default() -> Self {
-        VgaColor::new(Color::Yellow, Color::Black)
+        VgaColor::new(Color::White, Color::Black)
     }
 }
 
