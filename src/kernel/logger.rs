@@ -5,7 +5,6 @@ struct SimpleLogger {
     level: LevelFilter,
 }
 
-
 impl log::Log for SimpleLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
         metadata.level() <= self.level
@@ -16,11 +15,11 @@ impl log::Log for SimpleLogger {
             return;
         }
 
+        // todo timestamp
         print_in_color(
             format_args!(
-                "[{:<5}][{},-] {}\n",
+                "[{:<5}] {}\n",
                 record.level(),
-                1, // todo cpuId
                 record.args()
             ),
             record.level(),
@@ -32,7 +31,7 @@ impl log::Log for SimpleLogger {
 
 // 不需要Mutex,因为底层的_print是安全的
 static LOGGER: SimpleLogger = SimpleLogger {
-    level: LevelFilter::Trace
+    level: LevelFilter::Trace,
 };
 
 pub fn init_logger() {
@@ -50,4 +49,3 @@ fn print_in_color(args: fmt::Arguments, level: Level) {
         Level::Trace => _print(format_args!("\x1b[90m{}\x1b[0m", args)), // BrightBlack
     };
 }
-
