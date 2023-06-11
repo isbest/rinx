@@ -3,7 +3,7 @@ use core::slice;
 use lazy_static::lazy_static;
 use log::{debug, info};
 use spin::Mutex;
-use x86::dtables::{sgdt, DescriptorTablePointer, lgdt};
+use x86::dtables::{lgdt, sgdt, DescriptorTablePointer};
 use x86::segmentation::Descriptor;
 
 const GDT_SIZE: u16 = 128;
@@ -26,7 +26,7 @@ pub fn init_gdt() {
     }
 
     debug!("loader gdt len: {}", get_len(gdtr.limit));
-    debug!("loader gdt base: {:p}", {gdtr.base});
+    debug!("loader gdt base: {:p}", { gdtr.base });
     let gdt: &[Descriptor] =
         unsafe { slice::from_raw_parts(gdtr.base as *mut Descriptor, get_len(gdtr.limit)) };
 
@@ -35,11 +35,12 @@ pub fn init_gdt() {
 
     gdtr.base = GDT.lock().as_ptr();
     gdtr.limit = get_limit(GDT.lock().len());
-    info!("kernel gdt len: {}", GDT.lock().len() );
-    info!("kernel gdt base: {:p}", {gdtr.base});
+
+    info!("kernel gdt len: {}", GDT.lock().len());
+    info!("kernel gdt base: {:p}", { gdtr.base });
 
     unsafe {
-        lgdt(&gdtr)
+        lgdt(&gdtr);
     }
 }
 
