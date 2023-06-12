@@ -1,4 +1,5 @@
-use core::intrinsics::size_of;
+use crate::kernel::len_of_limit;
+use core::mem::size_of;
 use core::slice;
 use lazy_static::lazy_static;
 use log::{debug, info};
@@ -6,14 +7,13 @@ use spin::Mutex;
 use x86::dtables::{lgdt, sgdt, DescriptorTablePointer};
 use x86::segmentation::Descriptor;
 
-const GDT_SIZE: u16 = 128;
-const GDT_STRUCT_SIZE: usize = size_of::<Descriptor>();
+const GDT_SIZE: usize = 128;
 
 // 内核全局描述符
 lazy_static! {
-    static ref GDT: Mutex<[Descriptor; GDT_SIZE as usize]> = {
+    static ref GDT: Mutex<[Descriptor; GDT_SIZE]> = {
         #[allow(unused_mut)]
-        let mut gdt = Mutex::new([Descriptor::default(); GDT_SIZE as usize]);
+        let mut gdt = Mutex::new([Descriptor::default(); GDT_SIZE]);
         gdt
     };
 }
@@ -25,16 +25,20 @@ pub fn init_gdt() {
         sgdt(&mut gdtr);
     }
 
-    debug!("loader gdt len: {}", get_len(gdtr.limit));
+    debug!("loader gdt len: {}", len_of_limit::<Descriptor>(gdtr.limit));
     debug!("loader gdt base: {:p}", { gdtr.base });
-    let gdt: &[Descriptor] =
-        unsafe { slice::from_raw_parts(gdtr.base as *mut Descriptor, get_len(gdtr.limit)) };
+    let gdt: &[Descriptor] = unsafe {
+        slice::from_raw_parts(
+            gdtr.base as *mut Descriptor,
+            len_of_limit::<Descriptor>(gdtr.limit),
+        )
+    };
 
     // 拷贝到内核
     GDT.lock()[..gdt.len()].clone_from_slice(gdt);
 
     gdtr.base = GDT.lock().as_ptr();
-    gdtr.limit = get_limit(GDT.lock().len());
+    gdtr.limit = (size_of::<[Descriptor; GDT_SIZE]>() - 1) as u16;
 
     info!("kernel gdt len: {}", GDT.lock().len());
     info!("kernel gdt base: {:p}", { gdtr.base });
@@ -42,14 +46,4 @@ pub fn init_gdt() {
     unsafe {
         lgdt(&gdtr);
     }
-}
-
-// get GDT limit from GDT slice
-fn get_limit(len: usize) -> u16 {
-    (len * GDT_STRUCT_SIZE - 1) as u16
-}
-
-// get GDT length form gdt_ptr.limit
-fn get_len(limit: u16) -> usize {
-    (limit + 1) as usize / GDT_STRUCT_SIZE
 }

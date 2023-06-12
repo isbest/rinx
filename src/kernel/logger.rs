@@ -17,11 +17,7 @@ impl log::Log for SimpleLogger {
 
         // todo timestamp
         print_in_color(
-            format_args!(
-                "[{:<5}] {}\n",
-                record.level(),
-                record.args()
-            ),
+            format_args!("[{:<5}] {}\n", record.level(), record.args()),
             record.level(),
         );
     }
