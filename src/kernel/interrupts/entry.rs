@@ -1,3 +1,4 @@
+use crate::kernel::interrupts::InterruptEntry;
 use core::fmt;
 use core::marker::PhantomData;
 
@@ -75,6 +76,8 @@ pub struct EntryOptions(u8);
 
 /// 门的类型
 impl EntryOptions {
+    /// 小端序存储,低字节存储在低地址,高字节存储在高地址
+    /// 因此下面说的位要从左往右数
     /// 中断门, 系统段, 内核特权级默认无效
     /// 一共8位
     /// 4-7表示门类型,1110 是中断门
@@ -83,16 +86,17 @@ impl EntryOptions {
     /// 第0位表示是否在内存中
     #[inline]
     const fn minimal() -> Self {
-        EntryOptions(0b1110_0000)
+        EntryOptions(0b00001110)
     }
 
     #[inline]
     pub fn set_present(&mut self, present: bool) -> &mut Self {
         if present {
             // 第0位设置成1即可
-            self.0 &= 0b1111_1111;
+            self.0 |= 0b1000_0000;
         } else {
-            self.0 &= 0b1111_1110;
+            // 不存在将第0位设置成0
+            self.0 |= 0b0111_1111;
         }
 
         self
@@ -100,30 +104,32 @@ impl EntryOptions {
 
     #[inline]
     pub fn set_privilege_level(&mut self, dpl: u8) -> &mut Self {
-        let mask: u8 = 0b1111_1001;
-        // dpl 先左移1位,移动到正确的位置,然后做与运算,只取dpl(左移前)的低两位
-        let dpl = (dpl << 1) | mask;
-
-        // 设置特权级别
-        self.0 &= dpl;
-
+        // 先与0b1001_1111,清空特权级
+        // 然后dpl与上0b11取低2两位的特权级
+        // 然后左移5位,移动到正确的位置
+        // 与运算,设置特权级别
+        self.0 = (self.0 & 0b1001_1111) | ((dpl & 0b11) << 5);
         self
     }
 
     #[inline]
-    pub unsafe fn set_segment(&mut self, segment: u8) -> &mut Self {
-        // 只取用最低位
-        let mask: u8 = 0b1111_1011;
-        let segment = (segment << 3) | mask;
-        self.0 &= segment;
-
-        self
+    pub fn set_code_segment(&mut self, code_segment: u16) {
+        // 原理同上
+        self.0 = (self.0 & 0xF8) | ((code_segment >> 3) as u8);
     }
 }
 
-impl Entry<unsafe extern "C" fn()> {
-    #[inline]
-    pub fn set_handler_fn(&mut self, handler: unsafe extern "C" fn()) -> &mut EntryOptions {
-        self.set_handler_addr(handler as usize as u32)
-    }
+/// 为指定类型实现set_handler_fn的宏
+macro_rules! impl_set_handler_fn {
+    ($h:ty) => {
+        impl Entry<$h> {
+            #[inline]
+            pub fn set_handler_fn(&mut self, handler: $h) -> &mut EntryOptions {
+                self.set_handler_addr(handler as usize as u32)
+            }
+        }
+    };
 }
+
+// 为InterruptEntry类型实现
+impl_set_handler_fn!(InterruptEntry);

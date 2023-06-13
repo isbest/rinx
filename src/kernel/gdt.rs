@@ -1,5 +1,4 @@
-use crate::kernel::len_of_limit;
-use core::mem::size_of;
+use crate::kernel::{len_of_limit, limit_of_type};
 use core::slice;
 use lazy_static::lazy_static;
 use log::{debug, info};
@@ -26,7 +25,6 @@ pub fn init_gdt() {
     }
 
     debug!("loader gdt len: {}", len_of_limit::<Descriptor>(gdtr.limit));
-    debug!("loader gdt base: {:p}", { gdtr.base });
     let gdt: &[Descriptor] = unsafe {
         slice::from_raw_parts(
             gdtr.base as *mut Descriptor,
@@ -38,7 +36,7 @@ pub fn init_gdt() {
     GDT.lock()[..gdt.len()].clone_from_slice(gdt);
 
     gdtr.base = GDT.lock().as_ptr();
-    gdtr.limit = (size_of::<[Descriptor; GDT_SIZE]>() - 1) as u16;
+    gdtr.limit = limit_of_type::<[Descriptor; GDT_SIZE]>();
 
     info!("kernel gdt len: {}", GDT.lock().len());
     info!("kernel gdt base: {:p}", { gdtr.base });

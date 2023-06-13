@@ -2,6 +2,7 @@
 #![no_main]
 #![allow(dead_code)]
 #![feature(naked_functions)]
+#![feature(asm_const)]
 
 extern crate alloc;
 
@@ -10,12 +11,11 @@ mod kernel;
 mod mm;
 
 use crate::kernel::gdt::init_gdt;
-use crate::kernel::interrupts::init_idt;
+use crate::kernel::interrupts::idt::init_idt;
 use crate::kernel::logger::init_logger;
 use core::arch::{asm, global_asm};
 use core::panic::PanicInfo;
 use log::info;
-use x86::int;
 
 global_asm!(include_str!("entry.asm"));
 
@@ -29,10 +29,10 @@ pub extern "C" fn rust_main() -> ! {
     init_idt();
 
     info!("hello, this is rust kernel");
-    unsafe {
 
-        asm!("xchg bx, bx");
-        asm!("int 0x80");
+    bmb!();
+    unsafe {
+        asm!("mov eax, 1", "xor edx, edx", "div edx", options(noreturn));
     }
 
     #[allow(clippy::empty_loop)]
