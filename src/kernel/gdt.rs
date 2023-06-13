@@ -1,7 +1,7 @@
 use crate::kernel::{len_of_limit, limit_of_type};
 use core::slice;
 use lazy_static::lazy_static;
-use log::{debug, info};
+use log::debug;
 use spin::Mutex;
 use x86::dtables::{lgdt, sgdt, DescriptorTablePointer};
 use x86::segmentation::Descriptor;
@@ -38,8 +38,8 @@ pub fn init_gdt() {
     gdtr.base = GDT.lock().as_ptr();
     gdtr.limit = limit_of_type::<[Descriptor; GDT_SIZE]>();
 
-    info!("kernel gdt len: {}", GDT.lock().len());
-    info!("kernel gdt base: {:p}", { gdtr.base });
+    debug!("kernel gdt len: {}", GDT.lock().len());
+    debug!("kernel gdt base: {:p}", { gdtr.base });
 
     unsafe {
         lgdt(&gdtr);
