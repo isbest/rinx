@@ -16,6 +16,7 @@ use crate::kernel::logger::init_logger;
 use core::arch::{asm, global_asm};
 use core::panic::PanicInfo;
 use log::info;
+use x86::int;
 
 global_asm!(include_str!("entry.asm"));
 
@@ -32,7 +33,8 @@ pub extern "C" fn rust_main() -> ! {
 
     bmb!();
     unsafe {
-        asm!("mov eax, 1", "xor edx, edx", "div edx", options(noreturn));
+        // 由于0x80中断被初始化成0x0:0x0,所以是段错误,而不是GPE
+        int!(0x80);
     }
 
     #[allow(clippy::empty_loop)]
