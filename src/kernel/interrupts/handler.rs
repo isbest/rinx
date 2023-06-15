@@ -4,7 +4,7 @@ use log::error;
 
 // 中断函数表
 #[no_mangle]
-pub static INTERRUPT_HANDLER_TABLE: [InterruptHandler; ENTRY_SIZE] = {
+pub static mut INTERRUPT_HANDLER_TABLE: [InterruptHandler; ENTRY_SIZE] = {
     #[allow(unused_mut)]
     let mut interrupt_handler_table: [InterruptHandler; ENTRY_SIZE] =
         [exception_handler; ENTRY_SIZE];

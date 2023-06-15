@@ -19,7 +19,9 @@ pub fn limit_of_type<T>() -> u16 {
 #[macro_export]
 macro_rules! bmb {
     () => {
-        use core::arch::asm;
-        unsafe { asm!("xchg bx, bx",) };
+        unsafe {
+            use core::arch::asm;
+            asm!("xchg bx, bx",)
+        };
     };
 }

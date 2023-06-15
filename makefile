@@ -14,11 +14,15 @@ $(BUILD)/boot/loader.bin: $(SRC)/boot/loader.asm $(BUILD)/system.bin
 $(RUST_KERNEL_OUT)/rnix: $(SRC)/x86-rnix_os.json
 	cargo build
 
+$(BUILD)/system.map: $(RUST_KERNEL_OUT)/rnix
+	nm $< | sort > $@
+
 $(BUILD)/system.bin: $(RUST_KERNEL_OUT)/rnix
 	objcopy -O binary $< $@
 
 $(BUILD)/master.img: $(BUILD)/boot/boot.bin \
 					 $(BUILD)/boot/loader.bin \
+					 $(BUILD)/system.map \
 					 $(BUILD)/system.bin
 	yes | bximage -q -hd=16 -func=create -sectsize=512 -imgmode=flat $@
 	dd if=$(BUILD)/boot/boot.bin of=$@ bs=512 count=1 conv=notrunc
