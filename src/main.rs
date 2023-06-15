@@ -11,12 +11,11 @@ mod kernel;
 mod mm;
 
 use crate::kernel::gdt::init_gdt;
-use crate::kernel::interrupts::idt::init_idt;
+use crate::kernel::interrupts::init_interrupt;
 use crate::kernel::logger::init_logger;
 use core::arch::{asm, global_asm};
 use core::panic::PanicInfo;
-use log::info;
-use x86::int;
+use x86::irq::enable;
 
 global_asm!(include_str!("entry.asm"));
 
@@ -27,18 +26,21 @@ pub extern "C" fn rust_main() -> ! {
     // 初始化内核全局描述符
     init_gdt();
     // 初始化中断
-    init_idt();
-
-    info!("hello, this is rust kernel");
-
-    bmb!();
+    init_interrupt();
+    // 开启外中断
     unsafe {
-        // 由于0x80中断被初始化成0x0:0x0,所以是段错误,而不是GPE
-        int!(0x80);
+        enable();
     }
 
-    #[allow(clippy::empty_loop)]
     loop {}
+}
+
+#[no_mangle]
+fn delay(mut count: u64) {
+    while count > 0 {
+        count -= 1;
+    }
+    bmb!();
 }
 
 #[panic_handler]

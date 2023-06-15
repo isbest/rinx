@@ -2,9 +2,9 @@
 /// 针对异常统一压入一个错误码,使中断函数签名统一
 ///
 use crate::kernel::interrupts::ENTRY_SIZE;
-use core::arch::asm;
+use core::arch::{asm, global_asm};
 
-/// 中断处理函数类型
+/// 中处理函数类型
 pub type InterruptHandler = fn(u32, u32);
 /// 中断入口类型(封装iret)
 pub type InterruptEntry = unsafe extern "C" fn();
@@ -44,8 +44,25 @@ pub static INTERRUPT_HANDLER_ENTRY_TABLE: [InterruptEntry; ENTRY_SIZE] = [
     interrupt_handler_0x1d,
     interrupt_handler_0x1e,
     interrupt_handler_0x1f,
+    interrupt_handler_0x20,
+    interrupt_handler_0x21,
+    interrupt_handler_0x22,
+    interrupt_handler_0x23,
+    interrupt_handler_0x24,
+    interrupt_handler_0x25,
+    interrupt_handler_0x26,
+    interrupt_handler_0x27,
+    interrupt_handler_0x28,
+    interrupt_handler_0x29,
+    interrupt_handler_0x2a,
+    interrupt_handler_0x2b,
+    interrupt_handler_0x2c,
+    interrupt_handler_0x2d,
+    interrupt_handler_0x2e,
+    interrupt_handler_0x2f,
 ];
 
+// 中断入口宏
 macro_rules! interrupt_handler {
     // 没有错误码,压入固定的错误码
     ($vector:expr, $name:ident, false) => {
@@ -53,14 +70,10 @@ macro_rules! interrupt_handler {
         #[no_mangle]
         unsafe extern "C" fn $name() {
             asm!(
+                "xchg bx, bx",
                 "push 0x20230612",
                 "push {0}",
-                "mov eax, [esp]",
-                // 调用中断处理函数
-                "call [INTERRUPT_HANDLER_TABLE + eax * 4]",
-                // 恢复栈
-                "add esp, 8",
-                "iret",
+                "jmp interrupt_entry",
                 const $vector,
                 options(noreturn)
             );
@@ -71,19 +84,29 @@ macro_rules! interrupt_handler {
         #[no_mangle]
         unsafe extern "C" fn $name() {
             asm!(
+                "xchg bx, bx",
                 "push {0}",
-                "mov eax, [esp]",
-                // 调用中断处理函数
-                "call [INTERRUPT_HANDLER_TABLE + eax * 4]",
-                // 恢复栈
-                "add esp, 8",
-                "iret",
+                "jmp interrupt_entry",
                 const $vector,
                 options(noreturn)
             );
         }
     };
 }
+
+// 中断处理的统一逻辑
+global_asm!(
+    r#"
+    .section .text
+    .global interrupt_entry
+interrupt_entry:
+    mov eax, [esp]
+    call [INTERRUPT_HANDLER_TABLE + eax * 4]
+    xchg bx, bx
+    add esp, 8
+    iret
+"#
+);
 
 // 中断入口函数生成
 interrupt_handler!(0x00, interrupt_handler_0x00, false); // divide by zero
@@ -125,3 +148,21 @@ interrupt_handler!(0x1c, interrupt_handler_0x1c, false); // reserved
 interrupt_handler!(0x1d, interrupt_handler_0x1d, false); // reserved
 interrupt_handler!(0x1e, interrupt_handler_0x1e, false); // reserved
 interrupt_handler!(0x1f, interrupt_handler_0x1f, false); // reserved
+
+// 外中断
+interrupt_handler!(0x20, interrupt_handler_0x20, false); // clock
+interrupt_handler!(0x21, interrupt_handler_0x21, false);
+interrupt_handler!(0x22, interrupt_handler_0x22, false);
+interrupt_handler!(0x23, interrupt_handler_0x23, false);
+interrupt_handler!(0x24, interrupt_handler_0x24, false);
+interrupt_handler!(0x25, interrupt_handler_0x25, false);
+interrupt_handler!(0x26, interrupt_handler_0x26, false);
+interrupt_handler!(0x27, interrupt_handler_0x27, false);
+interrupt_handler!(0x28, interrupt_handler_0x28, false);
+interrupt_handler!(0x29, interrupt_handler_0x29, false);
+interrupt_handler!(0x2a, interrupt_handler_0x2a, false);
+interrupt_handler!(0x2b, interrupt_handler_0x2b, false);
+interrupt_handler!(0x2c, interrupt_handler_0x2c, false);
+interrupt_handler!(0x2d, interrupt_handler_0x2d, false);
+interrupt_handler!(0x2e, interrupt_handler_0x2e, false);
+interrupt_handler!(0x2f, interrupt_handler_0x2f, false);

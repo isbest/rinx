@@ -1,6 +1,8 @@
 use crate::kernel::interrupts::entry::Entry;
+use crate::kernel::interrupts::handler::INTERRUPT_HANDLER_TABLE;
 use crate::kernel::interrupts::handler_entry::{InterruptEntry, INTERRUPT_HANDLER_ENTRY_TABLE};
-use crate::kernel::interrupts::{ENTRY_SIZE, IDT_SIZE};
+use crate::kernel::interrupts::pic::handler::default_handler;
+use crate::kernel::interrupts::{ENTRY_SIZE, EXT_START_VECTOR, IDT_SIZE};
 use crate::kernel::limit_of_type;
 use lazy_static::lazy_static;
 use log::debug;
@@ -20,8 +22,13 @@ lazy_static! {
 pub fn init_idt() {
     let mut idt: DescriptorTablePointer<Entry<InterruptEntry>> = DescriptorTablePointer::default();
 
-    (0..ENTRY_SIZE).for_each(|i| {
-        INTERRUPT_ENTRY.lock()[i].set_handler_fn(INTERRUPT_HANDLER_ENTRY_TABLE[i]);
+    (0..ENTRY_SIZE).for_each(|index| {
+        INTERRUPT_ENTRY.lock()[index].set_handler_fn(INTERRUPT_HANDLER_ENTRY_TABLE[index]);
+    });
+
+    // 初始化外中断默认处理函数
+    (EXT_START_VECTOR..ENTRY_SIZE).for_each(|index| unsafe {
+        INTERRUPT_HANDLER_TABLE[index] = default_handler;
     });
 
     debug!(
