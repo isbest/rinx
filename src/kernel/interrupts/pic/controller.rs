@@ -1,5 +1,5 @@
 use crate::kernel::interrupts::pic::{PIC_EOI, PIC_M_CTRL, PIC_M_DATA, PIC_S_CTRL, PIC_S_DATA};
-use x86::io::outb;
+use x86::{io::outb, irq::enable};
 
 pub fn init_pic() {
     unsafe {
@@ -36,4 +36,10 @@ pub fn send_eoi(vector: u32) {
 #[doc(hidden)]
 fn _contains(range: core::ops::Range<u32>, vector: u32) -> bool {
     range.start <= vector && vector < range.end
+}
+
+pub fn sti() {
+    unsafe {
+        enable();
+    }
 }

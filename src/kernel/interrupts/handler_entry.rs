@@ -70,7 +70,6 @@ macro_rules! interrupt_handler {
         #[no_mangle]
         unsafe extern "C" fn $name() {
             asm!(
-                "xchg bx, bx",
                 "push 0x20230612",
                 "push {0}",
                 "jmp interrupt_entry",
@@ -84,7 +83,6 @@ macro_rules! interrupt_handler {
         #[no_mangle]
         unsafe extern "C" fn $name() {
             asm!(
-                "xchg bx, bx",
                 "push {0}",
                 "jmp interrupt_entry",
                 const $vector,
@@ -104,14 +102,14 @@ interrupt_entry:
     call [INTERRUPT_HANDLER_TABLE + eax * 4]
     xchg bx, bx
     add esp, 8
-    iret
+    iretd
 "#
 );
 
 // 中断入口函数生成
 interrupt_handler!(0x00, interrupt_handler_0x00, false); // divide by zero
 interrupt_handler!(0x01, interrupt_handler_0x01, false); // debug
-interrupt_handler!(0x02, interrupt_handler_0x02, false); //non maskable interrupt
+interrupt_handler!(0x02, interrupt_handler_0x02, false); // non maskable interrupt
 interrupt_handler!(0x03, interrupt_handler_0x03, false); // breakpoint
 
 interrupt_handler!(0x04, interrupt_handler_0x04, false); // overflow
