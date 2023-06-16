@@ -16,6 +16,7 @@ use crate::kernel::logger::init_logger;
 use core::arch::{asm, global_asm};
 use core::panic::PanicInfo;
 use kernel::interrupts::pic::controller::sti;
+use log::info;
 
 global_asm!(include_str!("entry.asm"));
 
@@ -30,7 +31,12 @@ pub extern "C" fn rust_main() -> ! {
     // 开启外中断
     sti();
 
-    loop {}
+    let mut count = 0;
+    loop {
+        count += 1;
+        info!("{}", count);
+        delay(1000);
+    }
 }
 
 #[no_mangle]

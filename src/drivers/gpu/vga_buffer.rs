@@ -289,6 +289,10 @@ macro_rules! print {
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
+    // use crate::kernel::interrupts::pic::controller::without_interrupt;
     use core::fmt::Write;
-    WRITER.lock().write_fmt(args).unwrap();
+
+    // without_interrupt(|| {
+        WRITER.lock().write_fmt(args).unwrap();
+    // })
 }
