@@ -15,7 +15,7 @@ use crate::kernel::interrupts::init_interrupt;
 use crate::kernel::logger::init_logger;
 use core::arch::{asm, global_asm};
 use core::panic::PanicInfo;
-use x86::irq::enable;
+use kernel::interrupts::pic::controller::sti;
 
 global_asm!(include_str!("entry.asm"));
 
@@ -28,9 +28,7 @@ pub extern "C" fn rust_main() -> ! {
     // 初始化中断
     init_interrupt();
     // 开启外中断
-    unsafe {
-        enable();
-    }
+    sti();
 
     loop {}
 }
