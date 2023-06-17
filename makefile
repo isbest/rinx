@@ -1,6 +1,10 @@
 BUILD:=./build
 RUST_KERNEL_OUT=./build/x86-rnix_os/debug
 SRC:=.
+QEMU:= qemu-system-i386 \
+	-m 32M \
+	-drive file=$(BUILD)/master.img,if=ide,index=0,media=disk,format=raw \
+	-rtc base=localtime
 
 $(BUILD)/boot/%.bin: $(SRC)/boot/%.asm
 	$(shell mkdir -p $(dir $@))
@@ -41,15 +45,8 @@ bochs: $(BUILD)/master.img
 
 .PHONY: qemu
 qemu: $(BUILD)/master.img
-	qemu-system-i386 \
-		-m 32M \
-		-drive file=$(BUILD)/master.img,if=ide,index=0,media=disk,format=raw \
-		-rtc base=localtime
+	$(QEMU)
 
 .PHONY: qemu-gdb
 qemu-gdb: $(BUILD)/master.img
-	qemu-system-i386 \
-		-gdb tcp::9001 -S \
-		-m 32M \
-		-drive file=$(BUILD)/master.img,if=ide,index=0,media=disk,format=raw \
-		-rtc base=localtime
+	$(QEMU) -gdb tcp::9001 -S
