@@ -13,6 +13,7 @@ mod mm;
 use crate::kernel::gdt::init_gdt;
 use crate::kernel::interrupts::{init_interrupt, sti};
 use crate::kernel::logger::init_logger;
+use crate::kernel::time::now_time;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
 use log::info;
@@ -30,13 +31,11 @@ pub extern "C" fn rust_main() -> ! {
     // 开启外中断
     sti();
 
-    let mut count = 0;
     loop {
-        count += 1;
-        info!("{}", count);
-        delay(100000000);
         unsafe {
             use core::arch::asm;
+            delay(10000000);
+            info!("{}", now_time());
             asm!("int 0x80");
         }
     }
