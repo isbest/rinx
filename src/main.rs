@@ -11,11 +11,10 @@ mod kernel;
 mod mm;
 
 use crate::kernel::gdt::init_gdt;
-use crate::kernel::interrupts::init_interrupt;
+use crate::kernel::interrupts::{init_interrupt, sti};
 use crate::kernel::logger::init_logger;
-use core::arch::{asm, global_asm};
+use core::arch::global_asm;
 use core::panic::PanicInfo;
-use kernel::interrupts::pic::controller::sti;
 use log::info;
 
 global_asm!(include_str!("entry.asm"));
@@ -35,16 +34,19 @@ pub extern "C" fn rust_main() -> ! {
     loop {
         count += 1;
         info!("{}", count);
-        delay(1000);
+        delay(100000000);
+        unsafe {
+            use core::arch::asm;
+            asm!("int 0x80");
+        }
     }
 }
 
 #[no_mangle]
-fn delay(mut count: u64) {
+fn delay(mut count: i64) {
     while count > 0 {
         count -= 1;
     }
-    bmb!();
 }
 
 #[panic_handler]

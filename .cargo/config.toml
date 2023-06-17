@@ -7,5 +7,9 @@ target-dir = "build"
 target = "x86-rnix_os.json"
 [target.x86-rnix_os]
 rustflags = [
-    "-Clink-arg=-Tsrc/linker.ld", "-Cforce-frame-pointers=yes"
+    "-Clink-arg=-Tsrc/linker.ld",
+    "-Cforce-frame-pointers=yes",
+    "-Ctarget-feature=+rdrand",
+    "-Ctarget-feature=+sse2",
+    "-Ctarget-cpu=pentium"
 ]

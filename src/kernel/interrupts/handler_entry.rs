@@ -1,12 +1,31 @@
-/// x86_32 上的中断入口
-/// 针对异常统一压入一个错误码,使中断函数签名统一
-///
+use core::arch::asm;
+
+use crate::kernel::interrupts::handler::INTERRUPT_HANDLER_TABLE;
 use crate::kernel::interrupts::ENTRY_SIZE;
-use core::arch::{asm, global_asm};
 
 /// 中处理函数类型
-pub type InterruptHandler = fn(u32, u32);
-/// 中断入口类型(封装iret)
+pub type InterruptHandler = extern "C" fn(
+    vector: u32,
+    edi: u32,
+    esi: u32,
+    ebp: u32,
+    esp: u32,
+    ebx: u32,
+    edx: u32,
+    ecx: u32,
+    eax: u32,
+    gs: u32,
+    fs: u32,
+    es: u32,
+    ds: u32,
+    vector0: u32,
+    error: u32,
+    eip: u32,
+    cs: u32,
+    eflags: u32,
+);
+
+/// 中断入口类型(封装iretd)
 pub type InterruptEntry = unsafe extern "C" fn();
 
 /// 中断函数入口
@@ -67,44 +86,67 @@ macro_rules! interrupt_handler {
     // 没有错误码,压入固定的错误码
     ($vector:expr, $name:ident, false) => {
         #[naked]
-        #[no_mangle]
+        #[link_section = ".text"]
         unsafe extern "C" fn $name() {
             asm!(
+                "xchg bx, bx",
                 "push 0x20230612",
                 "push {0}",
-                "jmp interrupt_entry",
+                "jmp {1}",
                 const $vector,
+                sym interrupt_entry,
                 options(noreturn)
             );
         }
     };
     ($vector:expr, $name:ident, true) => {
         #[naked]
-        #[no_mangle]
+        #[link_section = ".text"]
         unsafe extern "C" fn $name() {
             asm!(
+                "xchg bx, bx",
                 "push {0}",
-                "jmp interrupt_entry",
+                "jmp {1}",
                 const $vector,
+                sym interrupt_entry,
                 options(noreturn)
             );
         }
     };
 }
 
-// 中断处理的统一逻辑
-global_asm!(
-    r#"
-    .section .text
-    .global interrupt_entry
-interrupt_entry:
-    mov eax, [esp]
-    call [INTERRUPT_HANDLER_TABLE + eax * 4]
-    xchg bx, bx
-    add esp, 8
-    iretd
-"#
-);
+#[naked]
+#[link_section = ".text"]
+pub extern "C" fn interrupt_entry() {
+    unsafe {
+        asm!(
+        // 保存上下文
+        "pushl %ds",
+        "pushl %es",
+        "pushl %fs",
+        "pushl %gs",
+        "pusha",
+        // 获取中断向量
+        "movl 48(%esp), %eax",
+        // 压入中断向量,此时栈顶就有两个中断向量了
+        "pushl %eax",
+        // 调用指定的处理函数
+        "call *{}(,%eax,4)",
+        // 中断向量出栈
+        "add $4, %esp",
+        // 恢复上下文
+        "popa",
+        "pop %gs",
+        "pop %fs",
+        "pop %es",
+        "pop %ds",
+        "add $8, %esp",
+        "iret",
+        sym INTERRUPT_HANDLER_TABLE,
+        options(noreturn, att_syntax)
+        )
+    }
+}
 
 // 中断入口函数生成
 interrupt_handler!(0x00, interrupt_handler_0x00, false); // divide by zero

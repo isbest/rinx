@@ -13,17 +13,52 @@ pub static mut INTERRUPT_HANDLER_TABLE: [InterruptHandler; ENTRY_SIZE] = {
 };
 
 /// 异常的默认处理函数
-pub fn exception_handler(vector_index: u32, error_code: u32) {
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn exception_handler(
+    vector: u32,
+    _edi: u32,
+    _esi: u32,
+    _ebp: u32,
+    esp: u32,
+    _ebx: u32,
+    _edx: u32,
+    _ecx: u32,
+    _eax: u32,
+    gs: u32,
+    fs: u32,
+    es: u32,
+    ds: u32,
+    _vector0: u32,
+    error_code: u32,
+    eip: u32,
+    cs: u32,
+    eflags: u32,
+) {
     use x86::irq::EXCEPTIONS;
-    if vector_index < 22 {
+
+    if vector < 22 {
         error!(
             "[EXCEPTION] {}, {}",
-            EXCEPTIONS[vector_index as usize], error_code
+            EXCEPTIONS[vector as usize], error_code
         );
     } else {
         error!("[EXCEPTION] {}, {}", EXCEPTIONS[15], error_code);
     }
 
+    error!(
+        r#"VECTOR:{}
+ ERROR:{}
+EFLAGS:{}
+    CS:{}
+    EIP:{}
+    ESP:{}
+    DS:{}
+    FS:{}
+    ES:{}
+    GS:{}"#,
+        vector, error_code, eflags, cs, eip, esp, ds, fs, es, gs
+    );
     #[allow(clippy::empty_loop)]
     loop {}
 }

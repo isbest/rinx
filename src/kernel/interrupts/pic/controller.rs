@@ -1,5 +1,4 @@
 use crate::kernel::interrupts::pic::{PIC_EOI, PIC_M_CTRL, PIC_M_DATA, PIC_S_CTRL, PIC_S_DATA};
-use core::arch::asm;
 use x86::io::outb;
 
 pub fn init_pic() {
@@ -37,22 +36,4 @@ pub fn send_eoi(vector: u32) {
 #[doc(hidden)]
 fn _contains(range: core::ops::Range<u32>, vector: u32) -> bool {
     range.start <= vector && vector < range.end
-}
-
-pub fn sti() {
-    unsafe { asm!("sti", options(nomem, nostack)) }
-}
-
-pub fn cli() {
-    unsafe { asm!("cli", options(nomem, nostack)) }
-}
-
-pub fn without_interrupt<F, R>(f: F) -> R
-where
-    F: FnOnce() -> R,
-{
-    cli();
-    let ret = f();
-    sti();
-    ret
 }
