@@ -1,9 +1,9 @@
-use crate::kernel::interrupts::pic::controller::send_eoi;
+use crate::kernel::interrupts::pic::pic_controller::send_eoi;
 use log::debug;
 
 #[allow(clippy::too_many_arguments)]
 #[no_mangle]
-pub extern "C" fn default_handler(
+pub extern "C" fn default_external_handler(
     vector: u32,
     _edi: u32,
     _esi: u32,

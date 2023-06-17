@@ -1,5 +1,5 @@
-pub mod controller;
 pub mod handler;
+pub mod pic_controller;
 
 /// 主片控制端口
 pub const PIC_M_CTRL: u16 = 0x20;

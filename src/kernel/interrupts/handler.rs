@@ -1,5 +1,5 @@
 use crate::kernel::interrupts::handler_entry::InterruptHandler;
-use crate::kernel::interrupts::ENTRY_SIZE;
+use crate::kernel::interrupts::{ENTRY_SIZE, IDT_SIZE};
 use log::error;
 
 // 中断函数表
@@ -7,15 +7,23 @@ use log::error;
 pub static mut INTERRUPT_HANDLER_TABLE: [InterruptHandler; ENTRY_SIZE] = {
     #[allow(unused_mut)]
     let mut interrupt_handler_table: [InterruptHandler; ENTRY_SIZE] =
-        [exception_handler; ENTRY_SIZE];
+        [default_exception_handler; ENTRY_SIZE];
 
     interrupt_handler_table
 };
 
+pub fn set_interrupt_handler(index: usize, f: InterruptHandler) {
+    assert!((0..IDT_SIZE).contains(&index));
+
+    unsafe {
+        INTERRUPT_HANDLER_TABLE[index] = f;
+    }
+}
+
 /// 异常的默认处理函数
 #[no_mangle]
 #[allow(clippy::too_many_arguments)]
-pub extern "C" fn exception_handler(
+pub extern "C" fn default_exception_handler(
     vector: u32,
     _edi: u32,
     _esi: u32,

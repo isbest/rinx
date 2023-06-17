@@ -1,8 +1,8 @@
 use crate::kernel::interrupts::entry::Entry;
 use crate::kernel::interrupts::handler::INTERRUPT_HANDLER_TABLE;
 use crate::kernel::interrupts::handler_entry::{InterruptEntry, INTERRUPT_HANDLER_ENTRY_TABLE};
-use crate::kernel::interrupts::pic::handler::default_handler;
-use crate::kernel::interrupts::{ENTRY_SIZE, EXT_START_VECTOR, IDT_SIZE};
+use crate::kernel::interrupts::pic::handler::default_external_handler;
+use crate::kernel::interrupts::{ENTRY_SIZE, IDT_SIZE, IRQ_MASTER_NR};
 use crate::kernel::limit_of_type;
 use lazy_static::lazy_static;
 use log::debug;
@@ -27,8 +27,8 @@ pub fn init_idt() {
     });
 
     // 初始化外中断默认处理函数
-    (EXT_START_VECTOR..ENTRY_SIZE).for_each(|index| unsafe {
-        INTERRUPT_HANDLER_TABLE[index] = default_handler;
+    (IRQ_MASTER_NR..ENTRY_SIZE).for_each(|index| unsafe {
+        INTERRUPT_HANDLER_TABLE[index] = default_external_handler;
     });
 
     debug!(
