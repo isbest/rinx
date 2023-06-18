@@ -1,3 +1,3 @@
-pub mod heap_allocator;
+pub mod allocator;
+pub mod detected;
 pub mod page;
-mod physical_memory;
