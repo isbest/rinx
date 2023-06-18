@@ -39,8 +39,8 @@ fn print_in_color(args: fmt::Arguments, level: Level) {
     use crate::drivers::gpu::vga_buffer::_print;
     match level {
         Level::Error => _print(format_args!("\x1b[31m{}\x1b[0m", args)), // Red
-        Level::Warn => _print(format_args!("\x1b[93m{}\x1b[0m", args)),  // BrightYellow
-        Level::Info => _print(format_args!("\x1b[32m{}\x1b[0m", args)),  // Blue
+        Level::Warn => _print(format_args!("\x1b[93m{}\x1b[0m", args)), // BrightYellow
+        Level::Info => _print(format_args!("\x1b[32m{}\x1b[0m", args)), // Blue
         Level::Debug => _print(format_args!("\x1b[36m{}\x1b[0m", args)), // Green
         Level::Trace => _print(format_args!("\x1b[90m{}\x1b[0m", args)), // BrightBlack
     };

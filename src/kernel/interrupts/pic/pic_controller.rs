@@ -1,4 +1,6 @@
-use crate::kernel::interrupts::pic::{PIC_EOI, PIC_M_CTRL, PIC_M_DATA, PIC_S_CTRL, PIC_S_DATA};
+use crate::kernel::interrupts::pic::{
+    PIC_EOI, PIC_M_CTRL, PIC_M_DATA, PIC_S_CTRL, PIC_S_DATA,
+};
 use x86::io::outb;
 
 pub fn init_pic() {

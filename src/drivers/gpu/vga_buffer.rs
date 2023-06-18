@@ -218,7 +218,8 @@ impl Writer {
     }
 
     fn update_cursor(&mut self) {
-        self.cursor_position = (self.row_position * BUFFER_WIDTH + self.col_position) as u16;
+        self.cursor_position =
+            (self.row_position * BUFFER_WIDTH + self.col_position) as u16;
         unsafe {
             outb(VGA_INDEX_REGISTER, 0x0F);
             outb(VGA_DATA_REGISTER, (self.cursor_position & 0xFF) as u8);
@@ -256,8 +257,10 @@ impl fmt::Write for Writer {
                         if let CSISequence::Color(fg, bg, _) = csi_seq {
                             if fg.is_some() {
                                 let fg = unsafe { fg.unwrap_unchecked() };
-                                self.color_code =
-                                    VgaColor::new(Color::from(fg), Color::from(bg.unwrap_or(0)));
+                                self.color_code = VgaColor::new(
+                                    Color::from(fg),
+                                    Color::from(bg.unwrap_or(0)),
+                                );
                             } else {
                                 // 前景色不存在,则fallback到默认颜色
                                 self.color_code = VgaColor::default();

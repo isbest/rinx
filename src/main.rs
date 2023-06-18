@@ -33,10 +33,12 @@ pub extern "C" fn rust_main() -> ! {
 
     loop {
         unsafe {
-            use core::arch::asm;
-            delay(10000000);
+            delay(1000000);
             info!("{}", now_time());
-            asm!("int 0x80");
+
+            // 尝试访问内有页索引的地址
+            let invalid_number = (0x100000 * 20) as *mut u32;
+            *invalid_number = 10;
         }
     }
 }

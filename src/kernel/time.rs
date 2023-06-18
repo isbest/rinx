@@ -142,8 +142,8 @@ impl ReadRTC {
         if register_b & 0x04 == 0 {
             time.second = ReadRTC::bcd_to_bin(time.second);
             time.minute = ReadRTC::bcd_to_bin(time.minute);
-            time.hour =
-                ((time.hour & 0x0F) + (((time.hour & 0x70) / 16) * 10)) | (time.hour & 0x80);
+            time.hour = ((time.hour & 0x0F) + (((time.hour & 0x70) / 16) * 10))
+                | (time.hour & 0x80);
             time.day = ReadRTC::bcd_to_bin(time.day);
             time.month = ReadRTC::bcd_to_bin(time.month);
             time.year = ReadRTC::bcd_to_bin(time.year as u8) as u32;
@@ -180,7 +180,12 @@ impl fmt::Display for Time {
         write!(
             f,
             "[TIME] STARTUP TIME: {:02}-{:02}-{:02} {:02}:{:02}:{:02}",
-            self.year, self.month, self.day, self.hour, self.minute, self.second
+            self.year,
+            self.month,
+            self.day,
+            self.hour,
+            self.minute,
+            self.second
         )
     }
 }
