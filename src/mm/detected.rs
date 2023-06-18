@@ -1,6 +1,7 @@
 use core::slice;
 
 use crate::mm::allocator::init_heap;
+use crate::mm::page::KERNEL_MEMORY_SIZE;
 
 const KERNEL_MAGIC: u32 = 0x20230604;
 const MEMORY_BASE: u64 = 0x100000;
@@ -47,6 +48,13 @@ pub unsafe fn memory_init(kernel_magic: u32, addrs_count: *const u32) {
                 HEAP_MEMORY_SIZE = addr.size;
             }
         }
+    }
+
+    if HEAP_MEMORY_SIZE < KERNEL_MEMORY_SIZE as u64 {
+        panic!(
+            "System memory is {}M too small, at least {}M needed",
+            HEAP_MEMORY_SIZE, KERNEL_MEMORY_SIZE
+        );
     }
 
     // 起始地址必须是1M

@@ -1,15 +1,26 @@
+use core::mem::size_of;
 use core::slice;
 
+use crate::bmb;
 use x86::bits32::paging::{
-    PAddr, PDEntry, PDFlags, PTEntry, PTFlags, PAGE_SIZE_ENTRIES,
+    pd_index, PAddr, PDEntry, PDFlags, PTEntry, PTFlags, VAddr,
+    PAGE_SIZE_ENTRIES,
 };
 use x86::controlregs::{cr0, cr0_write, cr3_write, Cr0};
+use x86::tlb::flush;
 
-use crate::bmb;
+/// 内核页目录的位置设置为0x1000
+const KERNEL_PAGE_DIR: u32 = 0x1000;
 
-/// 页表位置2M的位置
-const KERNEL_PAGE_DIR: u32 = 0x200000;
-const KERNEL_PAGE_ENTRY: u32 = 0x201000;
+/// 内核页表索引
+const KERNEL_PAGE_TABLE: KernelPageTableType = [0x2000, 0x3000];
+
+/// 内核页目录索引的类型
+type KernelPageTableType = [u32; 2];
+
+/// 内核的内存空间,内核的页表数*1M,一个页表可以映射1M内存
+pub const KERNEL_MEMORY_SIZE: usize =
+    size_of::<KernelPageTableType>() * 0x100000;
 
 #[no_mangle]
 pub fn init_mem_mapping() {
@@ -24,39 +35,75 @@ pub fn init_mem_mapping() {
     // 页目录全部初始化为0,避免被别的地方初始化过
     page_dir_table.fill(PDEntry::new(PAddr::from(0), PDFlags::empty()));
 
-    // 设置第一个页目录,指向第一个页表
-    page_dir_table[0] = PDEntry::new(
-        PAddr::from(KERNEL_PAGE_ENTRY.idx_mask()),
-        PDFlags::P | PDFlags::RW | PDFlags::US,
+    let mut index: usize = 0;
+    // 开始映射内核的页表
+    KERNEL_PAGE_TABLE.iter().enumerate().for_each(
+        |(kernel_pd_index, page_addr)| {
+            // 通过页地址获取页表
+            let page_entry_table: &mut [PTEntry] = unsafe {
+                slice::from_raw_parts_mut(
+                    *page_addr as *mut PTEntry,
+                    PAGE_SIZE_ENTRIES,
+                )
+            };
+
+            page_dir_table[kernel_pd_index] = PDEntry::new(
+                PAddr::from((*page_addr).idx_mask()),
+                PDFlags::P | PDFlags::RW | PDFlags::US,
+            );
+
+            // 跳过页表0的位置,第0页不映射
+            page_entry_table.iter_mut().for_each(|pt_entry| {
+                if index == 0 {
+                    index += 1;
+                    return;
+                }
+
+                *pt_entry = PTEntry::new(
+                    // 用PAddr包裹页索引对应的物理内存的起始位置
+                    PAddr::from(index.page()),
+                    PTFlags::P | PTFlags::RW | PTFlags::US,
+                );
+                index += 1;
+            });
+        },
     );
 
-    // KERNEL_PAGE_ENTRY 第一个页表的物理内存地址
-    let page_entry_table: &mut [PTEntry] = unsafe {
-        slice::from_raw_parts_mut(
-            KERNEL_PAGE_ENTRY as *mut PTEntry,
-            PAGE_SIZE_ENTRIES,
-        )
-    };
+    // // 将页表的最后一个初始化成自己,方便在启用分页后修改页表
+    if let Some(last_entry) = page_dir_table.last_mut() {
+        *last_entry = PDEntry::new(
+            PAddr::from(KERNEL_PAGE_DIR.idx_mask()),
+            PDFlags::P | PDFlags::RW | PDFlags::US,
+        );
+    }
 
-    // 将第一个页表初始化,全部都映射到物理内存的1M以内
-    page_entry_table
-        .iter_mut()
-        .enumerate()
-        .for_each(|(index, pt_entry)| {
-            *pt_entry = PTEntry::new(
-                // 用PAddr包裹页索引对应的物理内存的起始位置
-                PAddr::from(index.page()),
-                PTFlags::P | PTFlags::RW | PTFlags::US,
-            );
-        });
-    // 0000_0000 0000_0000 0000_0000 1001_0000
-
-    bmb!();
     // 设置页目录
     set_cr3(page_dir_table);
-    bmb!();
     // 开启分页
     enable_page();
+    bmb!();
+}
+
+/// 开启虚拟内存后,获取页目录
+pub fn get_page_dir_table() -> &'static mut [PDEntry] {
+    unsafe {
+        slice::from_raw_parts_mut(0xFFFFF000 as *mut PDEntry, PAGE_SIZE_ENTRIES)
+    }
+}
+
+pub fn get_page_entry_table(addr: u32) -> &'static mut [PTEntry] {
+    unsafe {
+        slice::from_raw_parts_mut(
+            (0xffc00000 | pd_index(VAddr(addr))) as *mut PTEntry,
+            1,
+        )
+    }
+}
+
+pub fn flash_tlb(addr: usize) {
+    unsafe {
+        flush(addr);
+    }
 }
 
 pub fn set_cr3(page_dir_table: &mut [PDEntry]) {

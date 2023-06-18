@@ -28,18 +28,13 @@ pub extern "C" fn rust_main() -> ! {
     init_gdt();
     // 初始化中断
     init_interrupt();
+    bmb!();
     // 开启外中断
-    sti();
+    // sti();
 
     loop {
-        unsafe {
-            delay(1000000);
-            info!("{}", now_time());
-
-            // 尝试访问内有页索引的地址
-            let invalid_number = (0x100000 * 20) as *mut u32;
-            *invalid_number = 10;
-        }
+        delay(1000000);
+        info!("{}", now_time());
     }
 }
 
