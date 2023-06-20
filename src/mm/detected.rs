@@ -1,6 +1,6 @@
+use crate::bmb;
 use core::slice;
 
-use crate::mm::allocator::init_heap;
 use crate::mm::page::KERNEL_MEMORY_SIZE;
 
 const KERNEL_MAGIC: u32 = 0x20230604;
@@ -62,6 +62,5 @@ pub unsafe fn memory_init(kernel_magic: u32, addrs_count: *const u32) {
     // 必须是4K对齐
     assert_eq!(HEAP_MEMORY_SIZE & ALIGN_MASK, 0);
 
-    // 初始化内存分配器
-    init_heap(HEAP_MEMORY_BASE, HEAP_MEMORY_SIZE as usize);
+    bmb!();
 }

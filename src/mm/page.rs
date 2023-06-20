@@ -1,7 +1,8 @@
 use core::mem::size_of;
 use core::slice;
 
-use crate::bmb;
+use crate::mm::allocator::init_heap;
+use crate::mm::detected::HEAP_MEMORY_BASE;
 use x86::bits32::paging::{
     pd_index, PAddr, PDEntry, PDFlags, PTEntry, PTFlags, VAddr,
     PAGE_SIZE_ENTRIES,
@@ -10,7 +11,10 @@ use x86::controlregs::{cr0, cr0_write, cr3_write, Cr0};
 use x86::tlb::flush;
 
 /// 内核页目录的位置设置为0x1000
+/// loader的位置 嘿嘿
+/// 0x1000到0x7c00都是可用区域
 const KERNEL_PAGE_DIR: u32 = 0x1000;
+//
 
 /// 内核页表索引
 const KERNEL_PAGE_TABLE: KernelPageTableType = [0x2000, 0x3000];
@@ -33,6 +37,8 @@ pub fn init_mem_mapping() {
     };
 
     // 页目录全部初始化为0,避免被别的地方初始化过
+    // 巨坑,内核的GDT位于0x11a3,这个0初始化,会导致抹掉GDT
+    // 所以初始化顺序先初始化了内核GDT
     page_dir_table.fill(PDEntry::new(PAddr::from(0), PDFlags::empty()));
 
     let mut index: usize = 0;
@@ -81,7 +87,11 @@ pub fn init_mem_mapping() {
     set_cr3(page_dir_table);
     // 开启分页
     enable_page();
-    bmb!();
+
+    unsafe {
+        // 初始化内存分配器,虚拟地址1-8M是内核的
+        init_heap(HEAP_MEMORY_BASE, 0x80000);
+    }
 }
 
 /// 开启虚拟内存后,获取页目录

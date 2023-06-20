@@ -22,7 +22,7 @@ macro_rules! bmb {
     () => {
         unsafe {
             use core::arch::asm;
-            asm!("xchg bx, bx",)
+            asm!("xchg bx, bx");
         };
     };
 }
