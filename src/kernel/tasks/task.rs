@@ -135,8 +135,14 @@ impl Task {
         let next = Task::task_search(TaskState::TaskReady);
 
         // 不能是默认值
-        assert!(!next.is_null(), "next can not be null {:p}", next);
-        assert_eq!((*next).magic_number, KERNEL_MAGIC);
+        assert!(!next.is_null(), "next task can not be null {:p}", next);
+        // 不能栈溢出
+        assert_eq!(
+            (*next).magic_number,
+            KERNEL_MAGIC,
+            "next task:{:p} stack overflow",
+            next
+        );
 
         // 修改当前任务从Running -> Ready
         if (*current).state == TaskState::TaskRunning {

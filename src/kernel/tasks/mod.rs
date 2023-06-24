@@ -36,6 +36,16 @@ fn thread_b() -> u32 {
     }
 }
 
+fn thread_c() -> u32 {
+    use crate::print;
+
+    enable_interrupt(true);
+    loop {
+        delay(10000000);
+        print!("C");
+    }
+}
+
 unsafe fn task_setup() {
     let current = Task::current_task();
     (*current).magic_number = KERNEL_MAGIC;
@@ -44,9 +54,11 @@ unsafe fn task_setup() {
 
 pub fn init_task() {
     unsafe {
+        // 初始化0x10000的的任务
         task_setup();
 
         Task::create(thread_a, "A", 5, 0);
         Task::create(thread_b, "B", 5, 0);
+        Task::create(thread_c, "C", 5, 0);
     }
 }
