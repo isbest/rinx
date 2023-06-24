@@ -1,9 +1,7 @@
 //! this is a simple vga buffer driver
 
-use alloc::vec::Vec;
 use core::fmt;
 use core::ops::{Deref, DerefMut};
-use csi_parser::iter::{CsiParser, Output};
 use lazy_static::lazy_static;
 use spin::Mutex;
 use volatile::Volatile;
@@ -76,6 +74,9 @@ pub struct VgaColor(u8);
 impl VgaColor {
     fn new(foreground: Color, background: Color) -> VgaColor {
         VgaColor((background as u8) << 4 | (foreground as u8))
+    }
+    fn with_black_bg(foreground: Color) -> VgaColor {
+        Self::new(foreground, Color::Black)
     }
 }
 
@@ -243,39 +244,30 @@ impl Writer {
 
 impl fmt::Write for Writer {
     fn write_str(&mut self, text: &str) -> fmt::Result {
-        let output: Vec<Output> = text.csi_parser().collect();
-        if output.is_empty() {
-            self.write_string(text);
-        } else {
-            for out in output {
-                use csi_parser::enums::CSISequence;
-                match out {
-                    Output::Text(pure_text) => {
-                        self.write_string(pure_text);
-                    }
-                    Output::Escape(csi_seq) => {
-                        if let CSISequence::Color(fg, bg, _) = csi_seq {
-                            if fg.is_some() {
-                                // 前景色不存在就恢复成默认的颜色
-                                let fg = fg.unwrap_or(0);
-                                // 用0来恢复默认颜色
-                                if fg == 0 {
-                                    self.color_code = VgaColor::default();
-                                } else {
-                                    self.color_code = VgaColor::new(
-                                        Color::from(fg),
-                                        Color::from(bg.unwrap_or(0)),
-                                    );
-                                }
-                            } else {
-                                // 前景色不存在,则fallback到默认颜色
-                                self.color_code = VgaColor::default();
-                            }
-                        };
-                    }
-                }
+        match text {
+            "\x1b[31m" => {
+                self.color_code = VgaColor::with_black_bg(Color::from(31));
+            }
+            "\x1b[32m" => {
+                self.color_code = VgaColor::with_black_bg(Color::from(32));
+            }
+            "\x1b[36m" => {
+                self.color_code = VgaColor::with_black_bg(Color::from(36));
+            }
+            "\x1b[90m" => {
+                self.color_code = VgaColor::with_black_bg(Color::from(90));
+            }
+            "\x1b[93m" => {
+                self.color_code = VgaColor::with_black_bg(Color::from(93));
+            }
+            "\x1b[0m" => {
+                self.color_code = VgaColor::with_black_bg(Color::White);
+            }
+            _ => {
+                self.write_string(text);
             }
         }
+
         Ok(())
     }
 }

@@ -4,7 +4,6 @@
 use core::arch::asm;
 use core::mem::size_of;
 
-use crate::println;
 use x86::bits32::paging::BASE_PAGE_SIZE;
 
 type TargetFn = fn() -> u32;
@@ -112,15 +111,17 @@ pub unsafe extern "C" fn task_switch(next: *mut Task) {
 }
 
 fn thread_a() -> u32 {
+    use crate::print;
     loop {
-        println!("A");
+        print!("A");
         Task::schedule();
     }
 }
 
 fn thread_b() -> u32 {
+    use crate::print;
     loop {
-        println!("B");
+        print!("B");
         Task::schedule();
     }
 }
