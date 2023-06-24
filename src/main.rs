@@ -10,8 +10,9 @@ mod drivers;
 mod kernel;
 mod mm;
 
-use crate::kernel::interrupts::{init_interrupt, sti};
+use crate::kernel::interrupts::init_interrupt;
 use crate::kernel::logger::init_logger;
+use crate::kernel::task::init_task;
 use crate::kernel::time::now_time;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
@@ -24,12 +25,17 @@ global_asm!(include_str!("entry.asm"));
 /// gdt放在内存映射之前初始化,避免内存被页目录占用
 #[no_mangle]
 pub extern "C" fn rust_main() -> ! {
+    // use crate::kernel::interrupts::sti;
     // 初始化日志
     init_logger();
     // 初始化中断
     init_interrupt();
     // 开启外中断
-    sti();
+    // sti();
+
+    info!("Hello World!");
+    println!("hello world");
+    init_task();
 
     loop {
         delay(10000000);

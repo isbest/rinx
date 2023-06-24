@@ -256,11 +256,17 @@ impl fmt::Write for Writer {
                     Output::Escape(csi_seq) => {
                         if let CSISequence::Color(fg, bg, _) = csi_seq {
                             if fg.is_some() {
-                                let fg = unsafe { fg.unwrap_unchecked() };
-                                self.color_code = VgaColor::new(
-                                    Color::from(fg),
-                                    Color::from(bg.unwrap_or(0)),
-                                );
+                                // 前景色不存在就恢复成默认的颜色
+                                let fg = fg.unwrap_or(0);
+                                // 用0来恢复默认颜色
+                                if fg == 0 {
+                                    self.color_code = VgaColor::default();
+                                } else {
+                                    self.color_code = VgaColor::new(
+                                        Color::from(fg),
+                                        Color::from(bg.unwrap_or(0)),
+                                    );
+                                }
                             } else {
                                 // 前景色不存在,则fallback到默认颜色
                                 self.color_code = VgaColor::default();

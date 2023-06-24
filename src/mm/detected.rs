@@ -1,4 +1,3 @@
-use crate::bmb;
 use core::slice;
 
 use crate::mm::page::KERNEL_MEMORY_SIZE;
@@ -61,6 +60,4 @@ pub unsafe fn memory_init(kernel_magic: u32, addrs_count: *const u32) {
     assert_eq!(HEAP_MEMORY_BASE, MEMORY_BASE);
     // 必须是4K对齐
     assert_eq!(HEAP_MEMORY_SIZE & ALIGN_MASK, 0);
-
-    bmb!();
 }

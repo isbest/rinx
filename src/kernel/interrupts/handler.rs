@@ -1,6 +1,7 @@
 use crate::kernel::interrupts::handler_entry::InterruptHandler;
 use crate::kernel::interrupts::{ENTRY_SIZE, IDT_SIZE};
 use log::error;
+use x86::irq::PageFaultError;
 
 // 中断函数表
 #[no_mangle]
@@ -45,6 +46,11 @@ pub extern "C" fn default_exception_handler(
 ) {
     use x86::irq::EXCEPTIONS;
 
+    if vector == 14 {
+        let page_error = PageFaultError::from_bits_truncate(error_code);
+        error!("[PageError] {}", page_error);
+    }
+
     if vector < 22 {
         error!(
             "[EXCEPTION] {}, {}",
@@ -55,16 +61,17 @@ pub extern "C" fn default_exception_handler(
     }
 
     error!(
-        r#"VECTOR:{}
+        r#"
+VECTOR:{}
  ERROR:{}
 EFLAGS:{}
     CS:{}
-    EIP:{}
-    ESP:{}
-    DS:{}
-    FS:{}
-    ES:{}
-    GS:{}"#,
+   EIP:{}
+   ESP:{}
+   DS:{}
+   FS:{}
+   ES:{}
+   GS:{}"#,
         vector, error_code, eflags, cs, eip, esp, ds, fs, es, gs
     );
     #[allow(clippy::empty_loop)]

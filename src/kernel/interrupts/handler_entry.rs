@@ -89,7 +89,6 @@ macro_rules! interrupt_handler {
         #[link_section = ".text"]
         unsafe extern "C" fn $name() {
             asm!(
-                "xchg bx, bx",
                 "push 0x20230612",
                 "push {0}",
                 "jmp {1}",
@@ -104,7 +103,6 @@ macro_rules! interrupt_handler {
         #[link_section = ".text"]
         unsafe extern "C" fn $name() {
             asm!(
-                "xchg bx, bx",
                 "push {0}",
                 "jmp {1}",
                 const $vector,
