@@ -15,8 +15,7 @@ use x86::tlb::flush;
 /// 第一页页表存储到 0x2000 8KB的位置
 /// 第三页页表存储到 0x3000 12KB的位置
 /// 0x1000 是前期loader的位置,加载完之后,内存就可以另作他用了,嘿嘿
-const KERNEL_PAGE_DIR: u32 = 0x1000;
-//
+pub const KERNEL_PAGE_DIR: u32 = 0x1000;
 
 /// 内核页表索引
 const KERNEL_PAGE_TABLE: KernelPageTableType = [0x2000, 0x3000];
@@ -92,7 +91,7 @@ pub fn init_mem_mapping() {
 
     unsafe {
         // 初始化内存分配器,虚拟地址1-8M是内核的
-        init_heap(HEAP_MEMORY_BASE, 0x80000);
+        init_heap(HEAP_MEMORY_BASE, 0x800000);
     }
 }
 

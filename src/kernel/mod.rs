@@ -3,7 +3,7 @@ use core::mem::size_of;
 pub mod gdt;
 pub mod interrupts;
 pub mod logger;
-pub mod task;
+pub mod tasks;
 pub mod time;
 
 /// 从limit获取长度

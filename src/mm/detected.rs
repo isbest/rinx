@@ -1,8 +1,8 @@
+use crate::KERNEL_MAGIC;
 use core::slice;
 
 use crate::mm::page::KERNEL_MEMORY_SIZE;
 
-const KERNEL_MAGIC: u32 = 0x20230604;
 const MEMORY_BASE: u64 = 0x100000;
 const ALIGN_MASK: u64 = 0xfff;
 

@@ -1,9 +1,10 @@
-use log::debug;
 use spin::Mutex;
 
 use crate::kernel::interrupts::handler::set_interrupt_handler;
 use crate::kernel::interrupts::pic::pic_controller::send_eoi;
 use crate::kernel::interrupts::{set_interrupt_mask, IRQ_CLOCK, IRQ_MASTER_NR};
+use crate::kernel::tasks::task::Task;
+use crate::KERNEL_MAGIC;
 
 /// 计数器0
 const PIT_CHAN0_REG: u16 = 0x40;
@@ -46,13 +47,26 @@ pub extern "C" fn clock_handler(
     _eflags: u32,
 ) {
     use core::ops::AddAssign;
-
+    // 必须是时钟中断
     assert_eq!(vector, 0x20);
 
-    JIFFIES.lock().add_assign(1);
-    debug!("clock jiffies: {}", JIFFIES.lock());
     // 通知中断控制器中断处理结束
     send_eoi(vector);
+
+    JIFFIES.lock().add_assign(1);
+
+    let current = Task::current_task();
+    unsafe {
+        assert_eq!((*current).magic_number, KERNEL_MAGIC, "{:p}", current);
+        (*current).jiffies = *JIFFIES.lock();
+        (*current).ticks -= 1;
+
+        if (*current).ticks <= 0 {
+            (*current).ticks = (*current).priority as i32;
+            // 调度任务
+            Task::schedule();
+        }
+    }
 }
 
 fn init_pit() {

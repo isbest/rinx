@@ -16,6 +16,7 @@ $(BUILD)/boot/loader.bin: $(SRC)/boot/loader.asm $(BUILD)/system.bin
 
 .PHONY: $(RUST_KERNEL_OUT)/rnix
 $(RUST_KERNEL_OUT)/rnix: $(SRC)/x86-rnix_os.json
+	cargo fmt
 	cargo build
 
 $(BUILD)/system.map: $(RUST_KERNEL_OUT)/rnix
@@ -50,3 +51,7 @@ qemu: $(BUILD)/master.img
 .PHONY: qemu-gdb
 qemu-gdb: $(BUILD)/master.img
 	$(QEMU) -gdb tcp::9001 -S
+
+.PHONY: fmt
+fmt:
+	cargo fmt

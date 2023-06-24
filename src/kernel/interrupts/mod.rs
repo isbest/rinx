@@ -59,13 +59,12 @@ pub fn init_interrupt() {
 }
 
 /// 开启外中断
-pub fn sti() {
-    unsafe { asm!("sti", options(nomem, nostack)) }
-}
-
-/// 关闭外中断
-pub fn cli() {
-    unsafe { asm!("cli", options(nomem, nostack)) }
+pub fn enable_interrupt(enable: bool) {
+    if enable {
+        unsafe { asm!("sti", options(nomem, nostack)) }
+    } else {
+        unsafe { asm!("cli", options(nomem, nostack)) }
+    }
 }
 
 /// 屏蔽外 中断执行函数
@@ -75,11 +74,11 @@ where
 {
     let saved_interrupt_flag = are_enabled();
     if saved_interrupt_flag {
-        cli();
+        enable_interrupt(false);
     }
     let ret = f();
     if saved_interrupt_flag {
-        sti();
+        enable_interrupt(true);
     }
     ret
 }
