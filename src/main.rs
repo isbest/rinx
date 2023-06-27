@@ -12,6 +12,7 @@ mod mm;
 
 use crate::kernel::interrupts::{enable_interrupt, init_interrupt};
 use crate::kernel::logger::init_logger;
+use crate::kernel::system_call::init_system_call;
 use crate::kernel::tasks::init_task;
 use crate::kernel::time::now_time;
 use core::arch::global_asm;
@@ -32,6 +33,8 @@ pub extern "C" fn rust_main() -> ! {
     init_interrupt();
     // 初始化任务
     init_task();
+    // 初始化系统调用
+    init_system_call();
     // 开启外中断
     enable_interrupt(true);
     info!("hello world, this is rust kernel");

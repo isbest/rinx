@@ -4,8 +4,9 @@ use core::ptr;
 use core::sync::atomic::AtomicPtr;
 use spin::Mutex;
 
+use crate::kernel::system_call::sys_call::sys_yield;
 use crate::kernel::tasks::task::Task;
-use crate::{delay, KERNEL_MAGIC};
+use crate::KERNEL_MAGIC;
 
 pub mod task;
 
@@ -22,8 +23,8 @@ fn thread_a() -> u32 {
 
     enable_interrupt(true);
     loop {
-        delay(10000000);
         print!("A");
+        sys_yield();
     }
 }
 
@@ -32,8 +33,8 @@ fn thread_b() -> u32 {
 
     enable_interrupt(true);
     loop {
-        delay(10000000);
         print!("B");
+        sys_yield();
     }
 }
 
@@ -43,8 +44,8 @@ fn thread_c() -> u32 {
 
     enable_interrupt(true);
     loop {
-        delay(10000000);
         print!("\n{}\n", now_time());
+        sys_yield();
     }
 }
 

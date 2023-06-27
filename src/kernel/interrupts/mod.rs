@@ -67,6 +67,23 @@ pub fn enable_interrupt(enable: bool) {
     }
 }
 
+/// 外中断是否开启 true开启,false未开启
+pub fn eflags_if() -> bool {
+    let if_bit: u32;
+
+    unsafe {
+        asm!(
+        "pushf",
+        "pop %eax",
+        "mov {}, %eax",
+        out(reg) if_bit,
+        options(att_syntax)
+        );
+    }
+
+    (if_bit & (1 << 9)) != 0
+}
+
 /// 屏蔽外 中断执行函数
 pub fn without_interrupt<F, R>(f: F) -> R
 where

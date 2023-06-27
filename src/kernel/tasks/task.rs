@@ -8,7 +8,7 @@ use core::mem::size_of;
 use core::ptr;
 use core::sync::atomic::Ordering;
 
-use crate::kernel::interrupts::without_interrupt;
+use crate::kernel::interrupts::{eflags_if, without_interrupt};
 use crate::kernel::tasks::{TASKS, TASKS_NUMBER};
 use crate::mm::page::KERNEL_PAGE_DIR;
 use crate::KERNEL_MAGIC;
@@ -130,6 +130,9 @@ impl Task {
     }
 
     pub unsafe fn schedule() {
+        // 不需保证不可中断
+        assert!(!eflags_if());
+
         let current = Task::current_task();
         // 查找就绪的任务
         let next = Task::task_search(TaskState::TaskReady);
