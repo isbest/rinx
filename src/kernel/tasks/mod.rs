@@ -38,12 +38,13 @@ fn thread_b() -> u32 {
 }
 
 fn thread_c() -> u32 {
+    use crate::kernel::time::now_time;
     use crate::print;
 
     enable_interrupt(true);
     loop {
         delay(10000000);
-        print!("C");
+        print!("\n{}\n", now_time());
     }
 }
 

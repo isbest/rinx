@@ -57,13 +57,18 @@ pub extern "C" fn clock_handler(
 
     let current = Task::current_task();
     unsafe {
+        // 内核栈溢出检测
         assert_eq!((*current).magic_number, KERNEL_MAGIC, "{:p}", current);
+        // 全局时间片
         (*current).jiffies = *JIFFIES.lock();
+        // 可用时间片-1
         (*current).ticks -= 1;
 
+        // 可用时间片使用完毕
         if (*current).ticks <= 0 {
+            // 重置可用时间片
             (*current).ticks = (*current).priority as i32;
-            // 调度任务
+            // 调度到别的任务
             Task::schedule();
         }
     }
