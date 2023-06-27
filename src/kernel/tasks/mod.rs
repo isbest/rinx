@@ -1,4 +1,5 @@
 use crate::kernel::interrupts::enable_interrupt;
+use core::arch::asm;
 use core::ptr;
 use core::sync::atomic::AtomicPtr;
 use spin::Mutex;
@@ -57,8 +58,11 @@ pub fn init_task() {
         // 初始化0x10000的的任务
         task_setup();
 
-        Task::create(thread_a, "A", 5, 0);
+        // 测试 系统调用
+        asm!("mov eax , 0", "int 0x80");
+
+        Task::create(thread_a, "A", 10, 0);
         Task::create(thread_b, "B", 5, 0);
-        Task::create(thread_c, "C", 5, 0);
+        Task::create(thread_c, "C", 6, 0);
     }
 }

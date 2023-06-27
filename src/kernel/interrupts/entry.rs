@@ -13,7 +13,7 @@ pub struct Entry<F> {
     /// 保留位
     reserved: u8,
     /// 选项
-    options: EntryOptions,
+    pub options: EntryOptions,
     /// 高16位
     offset_high: u16,
     phantom: PhantomData<F>,

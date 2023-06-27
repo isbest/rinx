@@ -14,7 +14,7 @@ pub mod idt;
 pub mod pic;
 
 /// IDT的大小
-pub const IDT_SIZE: usize = ENTRY_SIZE;
+pub const IDT_SIZE: usize = 256;
 /// 异常中断向量入口的大小
 pub const ENTRY_SIZE: usize = 0x30;
 /// 外中断主片开始的向量

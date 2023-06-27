@@ -6,6 +6,7 @@ use crate::kernel::interrupts::handler_entry::{
 use crate::kernel::interrupts::pic::handler::default_external_handler;
 use crate::kernel::interrupts::{ENTRY_SIZE, IDT_SIZE, IRQ_MASTER_NR};
 use crate::kernel::limit_of_type;
+use crate::kernel::system_call::system_call;
 use lazy_static::lazy_static;
 use spin::Mutex;
 use x86::dtables::{lidt, DescriptorTablePointer};
@@ -34,6 +35,11 @@ pub fn init_idt() {
     (IRQ_MASTER_NR..ENTRY_SIZE).for_each(|index| unsafe {
         INTERRUPT_HANDLER_TABLE[index] = default_external_handler;
     });
+
+    // 初始化系统调用
+    INTERRUPT_ENTRY.lock()[0x80].set_handler_fn(system_call);
+    // 设置为用户态
+    INTERRUPT_ENTRY.lock()[0x80].options.set_privilege_level(3);
 
     idt.base = INTERRUPT_ENTRY.lock().as_ptr();
     idt.limit = limit_of_type::<[Entry<InterruptEntry>; IDT_SIZE]>();
