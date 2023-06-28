@@ -29,7 +29,7 @@ $(BUILD)/master.img: $(BUILD)/boot/boot.bin \
 					 $(BUILD)/boot/loader.bin \
 					 $(BUILD)/system.map \
 					 $(BUILD)/system.bin
-	yes | bximage -q -hd=16 -func=create -sectsize=512 -imgmode=flat $@
+	qemu-img create -f raw -o size=16M $@
 	dd if=$(BUILD)/boot/boot.bin of=$@ bs=512 count=1 conv=notrunc
 	dd if=$(BUILD)/boot/loader.bin of=$@ bs=512 count=4 seek=2 conv=notrunc
 	test -n "$$(find $(BUILD)/system.bin -size -500k)"
