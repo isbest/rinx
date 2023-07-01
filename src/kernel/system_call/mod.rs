@@ -2,7 +2,7 @@ mod gate;
 pub mod sys_call;
 
 use crate::kernel::system_call::gate::{default_sys_call, SYSTEM_CALL_TABLE};
-use crate::kernel::system_call::sys_call::{task_yield, SysCall};
+use crate::kernel::system_call::sys_call::{task_sleep, task_yield, SysCall};
 use core::arch::asm;
 
 pub const SYS_CALL_SIZE: usize = 20;
@@ -61,9 +61,28 @@ pub(crate) extern "C" fn sys_call_check(sys_call_number: u32) {
     );
 }
 
-pub(crate) fn sys_call(sys_call: SysCall) {
+pub(crate) fn sys_call(sys_call: SysCall) -> u32 {
+    let res: u32;
     unsafe {
-        asm!("movl {0}, %eax", "int $0x80", in(reg) sys_call as u32, options(att_syntax, nostack))
+        asm!(
+        "int $0x80",
+        inout("eax") sys_call as u32 => res,
+        options(att_syntax)
+        );
+        res
+    }
+}
+
+pub(crate) fn sys_call_1(sys_call: SysCall, arg1: u32) -> u32 {
+    let res: u32;
+    unsafe {
+        asm!(
+        "int $0x80",
+        inout("eax") sys_call as u32 => res,
+        in("ebx") arg1,
+        options(att_syntax)
+        );
+        res
     }
 }
 
@@ -71,5 +90,6 @@ pub fn init_system_call() {
     unsafe {
         SYSTEM_CALL_TABLE[SysCall::Test as usize] = default_sys_call;
         SYSTEM_CALL_TABLE[SysCall::Yield as usize] = task_yield;
+        SYSTEM_CALL_TABLE[SysCall::Sleep as usize] = task_sleep;
     }
 }

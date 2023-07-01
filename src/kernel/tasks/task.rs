@@ -5,11 +5,14 @@ use alloc::alloc::alloc;
 use core::alloc::Layout;
 use core::arch::asm;
 use core::mem::size_of;
-use core::ptr;
 use core::ptr::{NonNull, Unique};
+use core::{mem, ptr};
 
+use crate::kernel::interrupts::clock::{JIFFIES, JIFFY};
 use crate::kernel::interrupts::{if_enabled, without_interrupt};
-use crate::kernel::tasks::{BLOCK_TASK_LIST, IDLE_TASK, TASKS, TASKS_NUMBER};
+use crate::kernel::tasks::{
+    BLOCK_TASK_LIST, IDLE_TASK, SLEEP_TASK_LIST, TASKS, TASKS_NUMBER,
+};
 use crate::libs::kernel_linked_list::Node;
 use crate::mm::page::KERNEL_PAGE_DIR;
 use crate::KERNEL_MAGIC;
@@ -32,7 +35,7 @@ pub struct Task {
     // 优先级
     pub priority: u32,
     // 剩余时间片
-    pub ticks: i32,
+    pub ticks: u64,
     // 上次执行时全局时间片
     pub jiffies: u64,
     // 任务名
@@ -247,6 +250,83 @@ impl Task {
         // 改为就绪状态
         task.as_mut().state = TaskState::TaskReady;
     }
+
+    pub unsafe fn sleep(ms: u32) {
+        // 必须保证不可中断
+        assert!(!if_enabled());
+
+        // 计算需要睡眠的时间片
+        let mut sleep_ticks = ms as usize / JIFFY;
+        // 至少睡一个时间片
+        if sleep_ticks == 0 {
+            sleep_ticks = 1;
+        }
+
+        let mut current = Task::current_task();
+        current.as_mut().ticks = *JIFFIES.lock() + sleep_ticks as u64;
+
+        // 确保节点没有被加入其他队列
+        assert!(current.as_ref().node.next.is_none());
+        assert!(current.as_ref().node.prev.is_none());
+
+        // 插入排序,找到全局时间片大于自己的第一个节点,然后插入到这个节点的前面
+        let anchor = SLEEP_TASK_LIST.lock().find_node(|node| {
+            let task = Task::get_task(node);
+            if let Some(task) = task {
+                // 找到时间片小于等于全局时间片的任务
+                task.as_ref().ticks > current.as_ref().ticks
+            } else {
+                false
+            }
+        });
+
+        // 找到了就插入
+        if let Some(anchor) = anchor {
+            SLEEP_TASK_LIST.lock().push_back_anchor_node(
+                anchor,
+                NonNull::from(&current.as_ref().node),
+            );
+            // 否则插入到头节点
+        } else {
+            SLEEP_TASK_LIST.lock().push_front_node(Unique::from(
+                NonNull::from(&current.as_ref().node),
+            ));
+        };
+
+        // 设置状态为sleep
+        current.as_mut().state = TaskState::TaskSleep;
+        // 主动调度到其他任务
+        Task::schedule();
+    }
+
+    // 唤醒所有睡觉的任务
+    pub unsafe fn wake_up() {
+        assert!(!if_enabled());
+        let mut current_node = SLEEP_TASK_LIST.lock().front_node();
+
+        while let Some(mut node) = current_node {
+            let task = Task::get_task(node);
+            if let Some(mut task) = task {
+                // 由于插入是有序的,所以只要遇到第一个还没有睡够的任务就可以直接结束了
+                if task.as_ref().ticks > *JIFFIES.lock() {
+                    break;
+                }
+
+                // 先切换到下一个节点
+                current_node = node.as_mut().next;
+
+                // 再将节点移出队列
+                task.as_mut().ticks = 0;
+                SLEEP_TASK_LIST.lock().unlink_node(node);
+                // 确保移出队列
+                assert!(task.as_ref().node.next.is_none());
+                assert!(task.as_ref().node.prev.is_none());
+
+                // 改为就绪状态
+                task.as_mut().state = TaskState::TaskReady;
+            }
+        }
+    }
 }
 
 /// private func
@@ -259,6 +339,17 @@ impl Task {
             task.as_ptr() as usize + BASE_PAGE_SIZE - size_of::<TaskFrame>();
         let frame = stack as *mut TaskFrame;
         unsafe { Unique::new_unchecked(frame) }
+    }
+
+    // 通过Node的指针求Task的指针
+    fn get_task(node_ptr: NonNull<Node<()>>) -> Option<Unique<Task>> {
+        let offset = mem::offset_of!(Task, node);
+        unsafe {
+            Unique::new(
+                (node_ptr.as_ptr() as *const u8).offset(-(offset as isize))
+                    as *mut Task,
+            )
+        }
     }
 }
 

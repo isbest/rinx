@@ -5,6 +5,7 @@
 #![feature(asm_const)]
 #![feature(ptr_internals)]
 #![feature(allocator_api)]
+#![feature(offset_of)]
 
 extern crate alloc;
 
@@ -16,7 +17,6 @@ mod mm;
 use crate::kernel::interrupts::{enable_interrupt, init_interrupt};
 use crate::kernel::system_call::init_system_call;
 use crate::kernel::tasks::init_task;
-use crate::kernel::time::now_time;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
 use x86::halt;
@@ -39,17 +39,8 @@ pub extern "C" fn rust_main() -> ! {
     enable_interrupt(true);
     info!("hello world, this is rust kernel");
 
-    loop {
-        delay(10000000);
-        info!("{}", now_time());
-    }
-}
-
-#[no_mangle]
-fn delay(mut count: i64) {
-    while count > 0 {
-        count -= 1;
-    }
+    #[allow(clippy::empty_loop)]
+    loop {}
 }
 
 #[panic_handler]

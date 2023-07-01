@@ -26,6 +26,8 @@ const NORMAL_USER: u32 = 1000;
 
 /// 阻塞队列
 static BLOCK_TASK_LIST: Mutex<LinkedList<()>> = Mutex::new(LinkedList::new());
+/// 睡眠队列
+static SLEEP_TASK_LIST: Mutex<LinkedList<()>> = Mutex::new(LinkedList::new());
 
 unsafe fn task_setup() {
     let mut current = Task::current_task();

@@ -121,6 +121,57 @@ impl<T, A: Allocator> LinkedList<T, A> {
 
         self.len -= 1;
     }
+
+    // 在指定元素前插入新元素
+    #[inline]
+    pub unsafe fn push_back_anchor_node(
+        &mut self,
+        mut existing_node: NonNull<Node<T>>,
+        mut new_node: NonNull<Node<T>>,
+    ) {
+        let existing_node_next = existing_node.as_mut().next.take();
+
+        new_node.as_mut().prev = Some(existing_node);
+        new_node.as_mut().next = existing_node_next;
+
+        existing_node.as_mut().next = Some(new_node);
+        if let Some(mut existing_node_next) = existing_node.as_mut().next {
+            existing_node_next.as_mut().prev = Some(new_node);
+        }
+
+        if self.tail.is_none() || self.tail == Some(existing_node) {
+            self.tail = Some(new_node);
+        }
+
+        self.len += 1;
+    }
+
+    // 搜索函数
+    pub fn find_node<F>(&self, mut condition: F) -> Option<NonNull<Node<T>>>
+    where
+        F: FnMut(NonNull<Node<T>>) -> bool,
+    {
+        let mut current_node = self.head;
+
+        while let Some(mut node) = current_node {
+            if condition(node) {
+                return Some(node);
+            }
+            current_node = unsafe { node.as_mut().next };
+        }
+
+        None
+    }
+
+    // 头节点
+    pub fn front_node(&self) -> Option<NonNull<Node<T>>> {
+        self.head
+    }
+
+    // 尾节点
+    pub fn end_node(&self) -> Option<NonNull<Node<T>>> {
+        self.tail
+    }
 }
 
 impl<T> LinkedList<T> {
