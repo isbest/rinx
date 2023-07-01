@@ -1,47 +1,58 @@
-use core::fmt;
-use log::{Level, LevelFilter, Metadata, Record};
-
-struct SimpleLogger {
-    level: LevelFilter,
+#[macro_export]
+macro_rules! info {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => {
+        $crate::print!("\x1b[32m");
+        $crate::print!("{}:{} ", file!(), line!());
+        $crate::drivers::gpu::vga_buffer::_print(format_args!($($arg)*));
+        $crate::print!("\n");
+        $crate::print!("\x1b[0m");
+    };
 }
 
-impl log::Log for SimpleLogger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= self.level
-    }
-
-    fn log(&self, record: &Record) {
-        if !self.enabled(record.metadata()) {
-            return;
-        }
-
-        // todo timestamp
-        print_in_color(
-            format_args!("[{:<5}] {}\n", record.level(), record.args()),
-            record.level(),
-        );
-    }
-
-    fn flush(&self) {}
+#[macro_export]
+macro_rules! warn {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => {
+        $crate::print!("\x1b[93m");
+        $crate::print!("{}:{} ", file!(), line!());
+        $crate::drivers::gpu::vga_buffer::_print(format_args!($($arg)*));
+        $crate::print!("\n");
+        $crate::print!("\x1b[0m");
+    };
 }
 
-// 不需要Mutex,因为底层的_print是安全的
-static LOGGER: SimpleLogger = SimpleLogger {
-    level: LevelFilter::Trace,
-};
-
-pub fn init_logger() {
-    log::set_max_level(LOGGER.level);
-    log::set_logger(&LOGGER).expect("init logger error");
+#[macro_export]
+macro_rules! error {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => {
+        $crate::print!("\x1b[31m");
+        $crate::print!("{}:{} ", file!(), line!());
+        $crate::drivers::gpu::vga_buffer::_print(format_args!($($arg)*));
+        $crate::print!("\n");
+        $crate::print!("\x1b[0m");
+    };
 }
 
-fn print_in_color(args: fmt::Arguments, level: Level) {
-    use crate::drivers::gpu::vga_buffer::_print;
-    match level {
-        Level::Error => _print(format_args!("\x1b[31m{}\x1b[0m", args)), // Red
-        Level::Warn => _print(format_args!("\x1b[93m{}\x1b[0m", args)), // BrightYellow
-        Level::Info => _print(format_args!("\x1b[32m{}\x1b[0m", args)), // Blue
-        Level::Debug => _print(format_args!("\x1b[36m{}\x1b[0m", args)), // Green
-        Level::Trace => _print(format_args!("\x1b[90m{}\x1b[0m", args)), // BrightBlack
+#[macro_export]
+macro_rules! debug {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => {
+        $crate::print!("\x1b[36m");
+        $crate::print!("{}:{} ", file!(), line!());
+        $crate::drivers::gpu::vga_buffer::_print(format_args!($($arg)*));
+        $crate::print!("\n");
+        $crate::print!("\x1b[0m");
+    };
+}
+#[macro_export]
+macro_rules! trace {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => {
+        $crate::print!("\x1b[90m");
+        $crate::print!("{}:{} ", file!(), line!());
+        $crate::drivers::gpu::vga_buffer::_print(format_args!($($arg)*));
+        $crate::print!("\n");
+        $crate::print!("\x1b[0m");
     };
 }

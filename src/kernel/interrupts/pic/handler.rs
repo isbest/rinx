@@ -1,5 +1,5 @@
+use crate::debug;
 use crate::kernel::interrupts::pic::pic_controller::send_eoi;
-use log::debug;
 
 #[allow(clippy::too_many_arguments)]
 #[no_mangle]

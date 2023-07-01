@@ -1,13 +1,14 @@
-use crate::kernel::interrupts::{enable_interrupt, without_interrupt};
-use core::ptr;
 use core::ptr::Unique;
 use spin::Mutex;
 
-use crate::kernel::tasks::task::{Task, TaskState};
+use crate::kernel::tasks::task::Task;
+use crate::kernel::tasks::thread::idle::idle;
+use crate::kernel::tasks::thread::init::init;
 use crate::libs::kernel_linked_list::LinkedList;
-use crate::{delay, KERNEL_MAGIC};
+use crate::KERNEL_MAGIC;
 
 pub mod task;
+mod thread;
 
 /// 任务数量
 const TASKS_NUMBER: usize = 64;
@@ -15,41 +16,16 @@ const TASKS_NUMBER: usize = 64;
 static TASKS: Mutex<[Option<Unique<Task>>; TASKS_NUMBER]> =
     Mutex::new([None; TASKS_NUMBER]);
 
+/// IDLE任务指针
+static mut IDLE_TASK: Unique<Task> = Unique::dangling();
+
+/// 内核用户
+const KERNEL_USER: u32 = 0;
+/// 普通用户
+const NORMAL_USER: u32 = 1000;
+
 /// 阻塞队列
 static BLOCK_TASK_LIST: Mutex<LinkedList<()>> = Mutex::new(LinkedList::new());
-
-fn thread_a() -> u32 {
-    use crate::print;
-
-    enable_interrupt(true);
-    loop {
-        delay(1000000);
-        print!("A");
-        test();
-    }
-}
-
-fn thread_b() -> u32 {
-    use crate::print;
-
-    enable_interrupt(true);
-    loop {
-        delay(1000000);
-        print!("B");
-        test();
-    }
-}
-
-fn thread_c() -> u32 {
-    use crate::print;
-
-    enable_interrupt(true);
-    loop {
-        delay(1000000);
-        print!("C");
-        test();
-    }
-}
 
 unsafe fn task_setup() {
     let mut current = Task::current_task();
@@ -61,24 +37,8 @@ pub fn init_task() {
     unsafe {
         // 初始化0x10000的的任务
         task_setup();
-
-        Task::create(thread_a, "A", 10, 0);
-        Task::create(thread_b, "B", 5, 0);
-        Task::create(thread_c, "C", 6, 0);
+        // idle任务优先级为1,永远不会被调度,除非没有就绪任务
+        IDLE_TASK = Task::create(idle, "idle", 1, KERNEL_USER);
+        Task::create(init, "init", 5, NORMAL_USER);
     }
-}
-
-static mut TEMP_TASK: *mut Task = ptr::null_mut();
-
-fn test() {
-    without_interrupt(|| unsafe {
-        if TEMP_TASK.is_null() {
-            let task = Task::current_task();
-            TEMP_TASK = task.as_ptr();
-            Task::block(task, TaskState::TaskBlocked);
-        } else {
-            Task::unblock(Unique::new_unchecked(TEMP_TASK));
-            TEMP_TASK = ptr::null_mut();
-        }
-    });
 }

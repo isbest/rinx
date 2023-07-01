@@ -14,13 +14,11 @@ mod libs;
 mod mm;
 
 use crate::kernel::interrupts::{enable_interrupt, init_interrupt};
-use crate::kernel::logger::init_logger;
 use crate::kernel::system_call::init_system_call;
 use crate::kernel::tasks::init_task;
 use crate::kernel::time::now_time;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
-use log::info;
 use x86::halt;
 
 pub const KERNEL_MAGIC: u32 = 0x20230604;
@@ -31,8 +29,6 @@ global_asm!(include_str!("entry.asm"));
 /// gdt放在内存映射之前初始化,避免内存被页目录占用
 #[no_mangle]
 pub extern "C" fn rust_main() -> ! {
-    // 初始化日志
-    init_logger();
     // 初始化中断
     init_interrupt();
     // 初始化任务

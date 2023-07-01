@@ -9,7 +9,7 @@ use core::ptr;
 use core::ptr::{NonNull, Unique};
 
 use crate::kernel::interrupts::{if_enabled, without_interrupt};
-use crate::kernel::tasks::{BLOCK_TASK_LIST, TASKS, TASKS_NUMBER};
+use crate::kernel::tasks::{BLOCK_TASK_LIST, IDLE_TASK, TASKS, TASKS_NUMBER};
 use crate::libs::kernel_linked_list::Node;
 use crate::mm::page::KERNEL_PAGE_DIR;
 use crate::KERNEL_MAGIC;
@@ -131,10 +131,8 @@ impl Task {
 
         // 不能是默认值
         assert!(next.is_some(), "next task can not be null");
-        // 不能栈溢出
 
         let mut next = next.unwrap();
-
         assert_eq!(
             next.as_ref().magic_number,
             KERNEL_MAGIC,
@@ -202,6 +200,11 @@ impl Task {
                     }
                 };
             });
+
+            // 没有就绪任务,则切换到idle任务
+            if result.is_none() {
+                result = Some(IDLE_TASK);
+            }
 
             result
         })

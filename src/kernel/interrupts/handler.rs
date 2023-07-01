@@ -1,6 +1,6 @@
+use crate::error;
 use crate::kernel::interrupts::handler_entry::InterruptHandler;
 use crate::kernel::interrupts::{ENTRY_SIZE, IDT_SIZE};
-use log::error;
 use x86::irq::PageFaultError;
 
 // 中断函数表
