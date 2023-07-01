@@ -1,25 +1,31 @@
-use crate::kernel::interrupts::enable_interrupt;
-use core::arch::asm;
+use crate::kernel::interrupts::{enable_interrupt, without_interrupt};
+use core::ptr;
 use core::ptr::Unique;
 use spin::Mutex;
 
-use crate::kernel::system_call::sys_call::sys_yield;
-use crate::kernel::tasks::task::Task;
-use crate::KERNEL_MAGIC;
+use crate::kernel::tasks::task::{Task, TaskState};
+use crate::libs::kernel_linked_list::LinkedList;
+use crate::{delay, KERNEL_MAGIC};
 
 pub mod task;
 
+/// 任务数量
 const TASKS_NUMBER: usize = 64;
+/// 任务列表
 static TASKS: Mutex<[Option<Unique<Task>>; TASKS_NUMBER]> =
     Mutex::new([None; TASKS_NUMBER]);
+
+/// 阻塞队列
+static BLOCK_TASK_LIST: Mutex<LinkedList<()>> = Mutex::new(LinkedList::new());
 
 fn thread_a() -> u32 {
     use crate::print;
 
     enable_interrupt(true);
     loop {
+        delay(1000000);
         print!("A");
-        sys_yield();
+        test();
     }
 }
 
@@ -28,19 +34,20 @@ fn thread_b() -> u32 {
 
     enable_interrupt(true);
     loop {
+        delay(1000000);
         print!("B");
-        sys_yield();
+        test();
     }
 }
 
 fn thread_c() -> u32 {
-    use crate::kernel::time::now_time;
     use crate::print;
 
     enable_interrupt(true);
     loop {
-        print!("\n{}\n", now_time());
-        sys_yield();
+        delay(1000000);
+        print!("C");
+        test();
     }
 }
 
@@ -55,11 +62,23 @@ pub fn init_task() {
         // 初始化0x10000的的任务
         task_setup();
 
-        // 测试 系统调用
-        asm!("mov eax , 0", "int 0x80");
-
         Task::create(thread_a, "A", 10, 0);
         Task::create(thread_b, "B", 5, 0);
         Task::create(thread_c, "C", 6, 0);
     }
+}
+
+static mut TEMP_TASK: *mut Task = ptr::null_mut();
+
+fn test() {
+    without_interrupt(|| unsafe {
+        if TEMP_TASK.is_null() {
+            let task = Task::current_task();
+            TEMP_TASK = task.as_ptr();
+            Task::block(task, TaskState::TaskBlocked);
+        } else {
+            Task::unblock(Unique::new_unchecked(TEMP_TASK));
+            TEMP_TASK = ptr::null_mut();
+        }
+    });
 }

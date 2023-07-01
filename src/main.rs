@@ -4,11 +4,13 @@
 #![feature(naked_functions)]
 #![feature(asm_const)]
 #![feature(ptr_internals)]
+#![feature(allocator_api)]
 
 extern crate alloc;
 
 mod drivers;
 mod kernel;
+mod libs;
 mod mm;
 
 use crate::kernel::interrupts::{enable_interrupt, init_interrupt};
@@ -19,6 +21,7 @@ use crate::kernel::time::now_time;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
 use log::info;
+use x86::halt;
 
 pub const KERNEL_MAGIC: u32 = 0x20230604;
 
@@ -56,5 +59,9 @@ fn delay(mut count: i64) {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
-    loop {}
+    loop {
+        unsafe {
+            halt();
+        }
+    }
 }
