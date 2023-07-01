@@ -6,7 +6,7 @@ use core::alloc::Layout;
 use core::arch::asm;
 use core::mem::size_of;
 use core::ptr;
-use core::sync::atomic::Ordering;
+use core::ptr::Unique;
 
 use crate::kernel::interrupts::{if_enabled, without_interrupt};
 use crate::kernel::tasks::{TASKS, TASKS_NUMBER};
@@ -22,9 +22,8 @@ type TargetFn = fn() -> u32;
 #[repr(align(4096))]
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Task {
-    // 栈顶地址,返回地址
-    // 内核栈
-    pub stack: *mut u32,
+    // 内核栈地址
+    pub stack: u32,
     // 任务状态
     pub state: TaskState,
     // 优先级
@@ -66,43 +65,33 @@ pub struct TaskFrame {
 }
 
 impl Task {
-    pub unsafe fn create(
+    pub fn create(
         target: TargetFn,
         name: &'static str,
         priority: u32,
         uid: u32,
-    ) -> *mut Task {
+    ) -> Unique<Task> {
         // 计算栈顶地址,栈从高地址向低地址增长
         // 所以加上BASE_PAGE_SIZE来计算栈顶
-        let task = Task::get_free_task();
-        let mut stack = task as usize + BASE_PAGE_SIZE;
-
-        // 指向task frame的指针,结构体是从低地址向高地址的
-        stack -= size_of::<TaskFrame>();
+        let mut task = Task::get_free_task();
+        let mut task_frame = Task::get_task_frame(task);
         unsafe {
-            // 减去函数指针的位置
-            // 将栈顶保存成函数的上下问,所以将栈顶减去函数上下文的大小
-            let frame = stack as *mut TaskFrame;
-            (*frame).ebx = 0x11111111;
-            (*frame).esi = 0x22222222;
-            (*frame).edi = 0x33333333;
-            (*frame).ebp = 0x44444444;
-            (*frame).eip = Some(target);
+            task_frame.as_mut().ebx = 0x11111111;
+            task_frame.as_mut().esi = 0x22222222;
+            task_frame.as_mut().edi = 0x33333333;
+            task_frame.as_mut().ebp = 0x44444444;
+            task_frame.as_mut().eip = Some(target);
+
+            task.as_mut().name = name;
+            task.as_mut().priority = priority;
+            task.as_mut().uid = uid;
+            task.as_mut().jiffies = 0;
+            task.as_mut().state = TaskState::TaskReady;
+            task.as_mut().magic_number = KERNEL_MAGIC;
+            task.as_mut().pde = KERNEL_PAGE_DIR;
+            // 内核栈
+            task.as_mut().stack = task_frame.as_ptr() as u32;
         }
-
-        unsafe {
-            (*task).name = name;
-            (*task).priority = priority;
-            (*task).uid = uid;
-            (*task).jiffies = 0;
-            (*task).state = TaskState::TaskReady;
-            (*task).magic_number = KERNEL_MAGIC;
-            (*task).pde = KERNEL_PAGE_DIR;
-
-            // 修改返回地址
-            (*task).stack = stack as *mut u32;
-        }
-
         task
     }
 
@@ -113,7 +102,7 @@ impl Task {
         task
     }
 
-    pub fn current_task() -> *mut Task {
+    pub fn current_task() -> Unique<Task> {
         let current: *mut Task;
         // 栈是在页内,因此只需要用sp的值,就能知道栈在哪一页
         // 就能知道是哪个任务
@@ -125,7 +114,7 @@ impl Task {
             options(att_syntax)
             );
 
-            &mut *current
+            Unique::new_unchecked(current)
         }
     }
 
@@ -133,82 +122,99 @@ impl Task {
         // 不需保证不可中断
         assert!(!if_enabled());
 
-        let current = Task::current_task();
+        let mut current = Task::current_task();
         // 查找就绪的任务
         let next = Task::task_search(TaskState::TaskReady);
 
         // 不能是默认值
-        assert!(!next.is_null(), "next task can not be null {:p}", next);
+        assert!(next.is_some(), "next task can not be null");
         // 不能栈溢出
+
+        let mut next = next.unwrap();
+
         assert_eq!(
-            (*next).magic_number,
+            next.as_ref().magic_number,
             KERNEL_MAGIC,
             "next task:{:p} stack overflow",
             next
         );
 
         // 修改当前任务从Running -> Ready
-        if (*current).state == TaskState::TaskRunning {
-            (*current).state = TaskState::TaskReady
+        if current.as_mut().state == TaskState::TaskRunning {
+            current.as_mut().state = TaskState::TaskReady
         }
 
-        (*next).state = TaskState::TaskRunning;
+        next.as_mut().state = TaskState::TaskRunning;
 
-        if ptr::eq(next, current) {
+        if ptr::eq(next.as_ptr(), current.as_ptr()) {
             return;
         }
 
-        task_switch(next);
+        task_switch(next.as_ptr());
     }
 
-    pub unsafe fn get_free_task() -> *mut Task {
+    pub fn get_free_task() -> Unique<Task> {
         let task_layout =
             Layout::from_size_align(size_of::<Task>(), BASE_PAGE_SIZE)
                 .expect("init task error");
 
-        let free_task = unsafe { alloc(task_layout) as *mut Task };
+        let free_task =
+            unsafe { Unique::new_unchecked(alloc(task_layout) as *mut Task) };
 
-        // 0初始化
-        ptr::write_bytes(free_task, 0, 1);
+        let pos = TASKS.lock().iter().position(Option::is_none);
 
-        for index in 0..TASKS_NUMBER {
-            let task = TASKS.lock()[index].load(Ordering::Relaxed);
-            if task.is_null() {
-                TASKS.lock()[index].swap(free_task, Ordering::Relaxed);
-                break;
-            }
-        }
+        // 不能写在一行,垃圾spin.lock会造成死锁
+        if let Some(index) = pos {
+            TASKS.lock()[index] = Some(free_task);
+        };
 
         free_task
     }
 
-    pub unsafe fn task_search(state: TaskState) -> *mut Task {
+    pub unsafe fn task_search(state: TaskState) -> Option<Unique<Task>> {
+        let mut result = None;
         without_interrupt(|| {
-            // 0初始化
-            let mut result: *mut Task = ptr::null_mut();
             let current_task = Task::current_task();
 
             (0..TASKS_NUMBER).for_each(|index| {
-                let task = TASKS.lock()[index].load(Ordering::Relaxed);
+                let task = TASKS.lock()[index];
 
-                if task.is_null() || task == current_task {
-                    return;
-                }
+                match task {
+                    None => {}
+                    Some(task) => {
+                        if task.as_ptr() == current_task.as_ptr() {
+                            return;
+                        }
 
-                if (*task).state != state {
-                    return;
-                }
+                        if task.as_ref().state != state {
+                            return;
+                        }
 
-                if result.is_null()
-                    || (*result).ticks < (*task).ticks
-                    || (*task).jiffies < (*result).jiffies
-                {
-                    result = task;
-                }
+                        if result.is_none()
+                            || result.is_some_and(|res_task: Unique<Task>| {
+                                res_task.as_ref().ticks < task.as_ref().ticks
+                                    || res_task.as_ref().jiffies
+                                        < task.as_ref().jiffies
+                            })
+                        {
+                            result = Some(task);
+                        }
+                    }
+                };
             });
 
             result
         })
+    }
+
+    fn get_task_frame(task: Unique<Task>) -> Unique<TaskFrame> {
+        // 计算上下文的地址
+        // 栈是从高地址向低地址增长的,任务是从一页的起始位置开始分配的
+        // 把一页的末尾(高地址)用来保存任务上下文,那么上下文的起始地址就是内核栈的栈底
+        let stack =
+            task.as_ptr() as usize + BASE_PAGE_SIZE - size_of::<TaskFrame>();
+        let frame = stack as *mut TaskFrame;
+        unsafe { Unique::new_unchecked(frame) }
     }
 }
 

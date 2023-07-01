@@ -1,7 +1,6 @@
 use crate::kernel::interrupts::enable_interrupt;
 use core::arch::asm;
-use core::ptr;
-use core::sync::atomic::AtomicPtr;
+use core::ptr::Unique;
 use spin::Mutex;
 
 use crate::kernel::system_call::sys_call::sys_yield;
@@ -10,13 +9,9 @@ use crate::KERNEL_MAGIC;
 
 pub mod task;
 
-#[doc(hidden)]
-#[allow(clippy::declare_interior_mutable_const)]
-const NULL_TASK_PTR: AtomicPtr<Task> = AtomicPtr::new(ptr::null_mut());
-
 const TASKS_NUMBER: usize = 64;
-static TASKS: Mutex<[AtomicPtr<Task>; TASKS_NUMBER]> =
-    Mutex::new([NULL_TASK_PTR; TASKS_NUMBER]);
+static TASKS: Mutex<[Option<Unique<Task>>; TASKS_NUMBER]> =
+    Mutex::new([None; TASKS_NUMBER]);
 
 fn thread_a() -> u32 {
     use crate::print;
@@ -50,9 +45,9 @@ fn thread_c() -> u32 {
 }
 
 unsafe fn task_setup() {
-    let current = Task::current_task();
-    (*current).magic_number = KERNEL_MAGIC;
-    (*current).ticks = 1;
+    let mut current = Task::current_task();
+    current.as_mut().magic_number = KERNEL_MAGIC;
+    current.as_mut().ticks = 1;
 }
 
 pub fn init_task() {

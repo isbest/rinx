@@ -55,19 +55,24 @@ pub extern "C" fn clock_handler(
 
     JIFFIES.lock().add_assign(1);
 
-    let current = Task::current_task();
     unsafe {
+        let mut current = Task::current_task();
         // 内核栈溢出检测
-        assert_eq!((*current).magic_number, KERNEL_MAGIC, "{:p}", current);
+        assert_eq!(
+            current.as_ref().magic_number,
+            KERNEL_MAGIC,
+            "{:p}",
+            current
+        );
         // 全局时间片
-        (*current).jiffies = *JIFFIES.lock();
+        current.as_mut().jiffies = *JIFFIES.lock();
         // 可用时间片-1
-        (*current).ticks -= 1;
+        current.as_mut().ticks -= 1;
 
         // 可用时间片使用完毕
-        if (*current).ticks <= 0 {
+        if current.as_mut().ticks <= 0 {
             // 重置可用时间片
-            (*current).ticks = (*current).priority as i32;
+            current.as_mut().ticks = current.as_ref().priority as i32;
             // 调度到别的任务
             Task::schedule();
         }
