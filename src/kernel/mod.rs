@@ -6,6 +6,7 @@ pub mod logger;
 pub mod system_call;
 pub mod tasks;
 pub mod time;
+pub mod sync;
 
 /// 从limit获取长度
 #[inline(always)]
