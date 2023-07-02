@@ -119,31 +119,47 @@ impl<T, A: Allocator> LinkedList<T, A> {
             None => self.tail = node.prev,
         };
 
+        // 清理Node指针
+        node.prev = None;
+        node.next = None;
+
         self.len -= 1;
     }
 
     // 在指定元素前插入新元素
     #[inline]
-    pub unsafe fn push_back_anchor_node(
+    pub unsafe fn insert_before_node(
         &mut self,
-        mut existing_node: NonNull<Node<T>>,
-        mut new_node: NonNull<Node<T>>,
+        existing_node: Option<NonNull<Node<T>>>,
+        new_node: NonNull<Node<T>>,
     ) {
-        let existing_node_next = existing_node.as_mut().next.take();
+        // 节点存在
+        if let Some(existing_node) = existing_node {
+            let existing_prev = (*existing_node.as_ptr()).prev;
 
-        new_node.as_mut().prev = Some(existing_node);
-        new_node.as_mut().next = existing_node_next;
+            // 更新new_node的指针
+            (*new_node.as_ptr()).prev = existing_prev;
+            (*new_node.as_ptr()).next = Some(existing_node);
 
-        existing_node.as_mut().next = Some(new_node);
-        if let Some(mut existing_node_next) = existing_node.as_mut().next {
-            existing_node_next.as_mut().prev = Some(new_node);
+            let node = Some(new_node);
+
+            match existing_prev {
+                None => {
+                    self.head = node;
+                }
+                Some(prev) => {
+                    (*prev.as_ptr()).next = node;
+                }
+            }
+
+            // 更新existing_node的指针
+            (*existing_node.as_ptr()).prev = node;
+
+            // 计数
+            self.len += 1;
+        } else {
+            self.push_back_node(Unique::from(new_node));
         }
-
-        if self.tail.is_none() || self.tail == Some(existing_node) {
-            self.tail = Some(new_node);
-        }
-
-        self.len += 1;
     }
 
     // 搜索函数

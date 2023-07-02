@@ -4,6 +4,7 @@
 use alloc::alloc::alloc;
 use core::alloc::Layout;
 use core::arch::asm;
+use core::fmt::{Display, Formatter};
 use core::mem::size_of;
 use core::ptr::{NonNull, Unique};
 use core::{mem, ptr};
@@ -59,6 +60,20 @@ pub enum TaskState {
     TaskSleep,
     TaskWaiting,
     TaskDied,
+}
+
+impl Display for TaskState {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            TaskState::TaskInit => f.write_str("INIT"),
+            TaskState::TaskRunning => f.write_str("Running"),
+            TaskState::TaskReady => f.write_str("Ready"),
+            TaskState::TaskBlocked => f.write_str("Blocked"),
+            TaskState::TaskSleep => f.write_str("Sleep"),
+            TaskState::TaskWaiting => f.write_str("Waiting"),
+            TaskState::TaskDied => f.write_str("Died"),
+        }
+    }
 }
 
 /// 任务上下文,切换前保存,切换后恢复
@@ -195,8 +210,8 @@ impl Task {
                     if result.is_none()
                         || result.is_some_and(|res_task: Unique<Task>| {
                             res_task.as_ref().ticks < task.as_ref().ticks
-                                || res_task.as_ref().jiffies
-                                    < task.as_ref().jiffies
+                                || task.as_ref().jiffies
+                                    < res_task.as_ref().jiffies
                         })
                     {
                         result = Some(task);
@@ -269,7 +284,7 @@ impl Task {
         assert!(current.as_ref().node.next.is_none());
         assert!(current.as_ref().node.prev.is_none());
 
-        // 插入排序,找到全局时间片大于自己的第一个节点,然后插入到这个节点的前面
+        // 插入排序,找到ticks大于自己的第一个节点,然后插入到这个节点的前面
         let anchor = SLEEP_TASK_LIST.lock().find_node(|node| {
             let task = Task::get_task(node);
             if let Some(task) = task {
@@ -280,20 +295,21 @@ impl Task {
             }
         });
 
-        // 找到了就插入
-        if let Some(anchor) = anchor {
-            SLEEP_TASK_LIST.lock().push_back_anchor_node(
+        // 没找到就是我是最大的,插入到队列尾部
+        if anchor.is_none() {
+            SLEEP_TASK_LIST
+                .lock()
+                .push_back_node(Unique::from(NonNull::from(
+                    &current.as_ref().node,
+                )));
+        } else {
+            SLEEP_TASK_LIST.lock().insert_before_node(
                 anchor,
                 NonNull::from(&current.as_ref().node),
             );
-            // 否则插入到头节点
-        } else {
-            SLEEP_TASK_LIST.lock().push_front_node(Unique::from(
-                NonNull::from(&current.as_ref().node),
-            ));
-        };
+        }
 
-        // 设置状态为sleep
+        // 设置状态为sleep,之后任务调度便不会再调度到这个线程,ticks也不会减少
         current.as_mut().state = TaskState::TaskSleep;
         // 主动调度到其他任务
         Task::schedule();
@@ -316,11 +332,11 @@ impl Task {
                 current_node = node.as_mut().next;
 
                 // 再将节点移出队列
-                task.as_mut().ticks = 0;
+                task.as_mut().ticks = task.as_ref().priority as u64;
                 SLEEP_TASK_LIST.lock().unlink_node(node);
                 // 确保移出队列
-                assert!(task.as_ref().node.next.is_none());
-                assert!(task.as_ref().node.prev.is_none());
+                node.as_mut().next = None;
+                node.as_mut().prev = None;
 
                 // 改为就绪状态
                 task.as_mut().state = TaskState::TaskReady;
@@ -342,7 +358,7 @@ impl Task {
     }
 
     // 通过Node的指针求Task的指针
-    fn get_task(node_ptr: NonNull<Node<()>>) -> Option<Unique<Task>> {
+    pub fn get_task(node_ptr: NonNull<Node<()>>) -> Option<Unique<Task>> {
         let offset = mem::offset_of!(Task, node);
         unsafe {
             Unique::new(
