@@ -1,7 +1,7 @@
+use crate::libs::kernel_linked_list::{LinkedList, Node};
 use core::cell::UnsafeCell;
 use core::ops::{Deref, DerefMut};
 use core::sync::atomic::{AtomicBool, Ordering};
-use crate::libs::kernel_linked_list::{LinkedList, Node};
 
 struct Mutex<T> {
     inner: InnerMutex<T>,
@@ -65,7 +65,6 @@ impl<T> InnerMutex<T> {
         self.lock.load(Ordering::Relaxed)
     }
 }
-
 
 // 关键方法,离开作用域自动解锁
 impl<'a, T: ?Sized> Drop for InnerMutexGuard<'a, T> {

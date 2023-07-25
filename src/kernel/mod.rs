@@ -3,10 +3,10 @@ use core::mem::size_of;
 pub mod gdt;
 pub mod interrupts;
 pub mod logger;
+pub mod sync;
 pub mod system_call;
 pub mod tasks;
 pub mod time;
-pub mod sync;
 
 /// 从limit获取长度
 #[inline(always)]
