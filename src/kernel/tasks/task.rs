@@ -9,6 +9,8 @@ use core::mem::size_of;
 use core::ptr::{NonNull, Unique};
 use core::{mem, ptr};
 
+use x86::bits32::paging::BASE_PAGE_SIZE;
+
 use crate::kernel::interrupts::clock::{JIFFIES, JIFFY};
 use crate::kernel::interrupts::{if_enabled, without_interrupt};
 use crate::kernel::tasks::{
@@ -17,7 +19,6 @@ use crate::kernel::tasks::{
 use crate::libs::kernel_linked_list::Node;
 use crate::mm::page::KERNEL_PAGE_DIR;
 use crate::KERNEL_MAGIC;
-use x86::bits32::paging::BASE_PAGE_SIZE;
 
 type TargetFn = fn() -> u32;
 
@@ -96,23 +97,25 @@ impl Task {
         // 所以加上BASE_PAGE_SIZE来计算栈顶
         let mut task = Task::get_free_task();
         let mut task_frame = Task::get_task_frame(task);
-        unsafe {
-            task_frame.as_mut().ebx = 0x11111111;
-            task_frame.as_mut().esi = 0x22222222;
-            task_frame.as_mut().edi = 0x33333333;
-            task_frame.as_mut().ebp = 0x44444444;
-            task_frame.as_mut().eip = Some(target);
 
-            task.as_mut().name = name;
-            task.as_mut().priority = priority;
-            task.as_mut().uid = uid;
-            task.as_mut().jiffies = 0;
-            task.as_mut().state = TaskState::TaskReady;
-            task.as_mut().magic_number = KERNEL_MAGIC;
-            task.as_mut().pde = KERNEL_PAGE_DIR;
-            // 内核栈
-            task.as_mut().stack = task_frame.as_ptr() as u32;
-        }
+        let task_mut = unsafe { task_frame.as_mut() };
+        task_mut.ebx = 0x11111111;
+        task_mut.esi = 0x22222222;
+        task_mut.edi = 0x33333333;
+        task_mut.ebp = 0x44444444;
+        task_mut.eip = Some(target);
+
+        let task_mut = unsafe { task.as_mut() };
+        task_mut.name = name;
+        task_mut.priority = priority;
+        task_mut.uid = uid;
+        task_mut.jiffies = 0;
+        task_mut.state = TaskState::TaskReady;
+        task_mut.magic_number = KERNEL_MAGIC;
+        task_mut.pde = KERNEL_PAGE_DIR;
+        // 内核栈
+        task_mut.stack = task_frame.as_ptr() as u32;
+
         task
     }
 
@@ -129,10 +132,10 @@ impl Task {
         // 就能知道是哪个任务
         unsafe {
             asm!(
-            "movl %esp, %eax",
-            "andl $0xfffff000, %eax",
-            out("eax") current,
-            options(att_syntax)
+                "movl %esp, %eax",
+                "andl $0xfffff000, %eax",
+                out("eax") current,
+                options(att_syntax)
             );
 
             Unique::new_unchecked(current)
