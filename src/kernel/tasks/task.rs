@@ -124,7 +124,7 @@ impl Task {
         task
     }
 
-    pub fn current_task() -> Unique<Task> {
+    pub fn current_task() -> NonNull<Task> {
         let current: *mut Task;
         // 栈是在页内,因此只需要用sp的值,就能知道栈在哪一页
         // 就能知道是哪个任务
@@ -136,7 +136,7 @@ impl Task {
                 options(att_syntax)
             );
 
-            Unique::new_unchecked(current)
+            NonNull::new_unchecked(current)
         }
     }
 
@@ -230,7 +230,7 @@ impl Task {
     }
 
     pub unsafe fn block(
-        mut task: Unique<Task>,
+        mut task: NonNull<Task>,
         state: TaskState,
         block_list: *mut LinkedList<()>,
     ) {
@@ -259,7 +259,7 @@ impl Task {
     }
 
     pub unsafe fn unblock(
-        mut task: Unique<Task>,
+        mut task: NonNull<Task>,
         block_list: *mut LinkedList<()>,
     ) {
         // 必须保证不可中断
@@ -370,10 +370,10 @@ impl Task {
     }
 
     // 通过Node的指针求Task的指针
-    pub fn get_task(node_ptr: NonNull<Node<()>>) -> Option<Unique<Task>> {
+    pub fn get_task(node_ptr: NonNull<Node<()>>) -> Option<NonNull<Task>> {
         let offset = mem::offset_of!(Task, node);
         unsafe {
-            Unique::new(
+            NonNull::new(
                 (node_ptr.as_ptr() as *const u8).offset(-(offset as isize))
                     as *mut Task,
             )
