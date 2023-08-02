@@ -1,8 +1,7 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="rnix" type="CLion_Remote" version="1" remoteCommand=":1234" symbolFile="$PROJECT_DIR$/build/x86-rnix_os/debug/rnix" sysroot="">
+  <configuration default="false" name="rnix" type="CLion_Remote" focusToolWindowBeforeRun="true" version="1" remoteCommand=":9001" symbolFile="$PROJECT_DIR$/build/x86-rnix_os/debug/rnix" sysroot="">
     <debugger kind="GDB" isBundled="true" />
     <method v="2">
-      <option name="RunConfigurationTask" enabled="false" run_configuration_name="build/master.img" run_configuration_type="MAKEFILE_TARGET_RUN_CONFIGURATION" />
       <option name="ToolBeforeRunTask" enabled="true" actionId="Tool_External Tools_qemu-rnix" />
     </method>
   </configuration>

@@ -1,5 +1,5 @@
+use crate::kernel::sync::mutex::Mutex;
 use core::ptr::Unique;
-use spin::Mutex;
 
 use crate::kernel::tasks::task::Task;
 use crate::kernel::tasks::thread::idle::idle;
@@ -26,8 +26,6 @@ const KERNEL_USER: u32 = 0;
 /// 普通用户
 const NORMAL_USER: u32 = 1000;
 
-/// 阻塞队列
-static BLOCK_TASK_LIST: Mutex<LinkedList<()>> = Mutex::new(LinkedList::new());
 /// 睡眠队列
 static SLEEP_TASK_LIST: Mutex<LinkedList<()>> = Mutex::new(LinkedList::new());
 

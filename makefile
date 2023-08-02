@@ -50,7 +50,7 @@ qemu: $(BUILD)/master.img
 
 .PHONY: qemu-gdb
 qemu-gdb: $(BUILD)/master.img
-	$(QEMU) -gdb tcp::9001 -S
+	$(QEMU) -gdb tcp::9001 -S &
 
 .PHONY: fmt
 fmt:

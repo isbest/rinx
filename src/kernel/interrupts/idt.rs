@@ -6,9 +6,9 @@ use crate::kernel::interrupts::handler_entry::{
 use crate::kernel::interrupts::pic::handler::default_external_handler;
 use crate::kernel::interrupts::{ENTRY_SIZE, IDT_SIZE, IRQ_MASTER_NR};
 use crate::kernel::limit_of_type;
+use crate::kernel::sync::mutex::Mutex;
 use crate::kernel::system_call::system_call;
 use lazy_static::lazy_static;
-use spin::Mutex;
 use x86::dtables::{lidt, DescriptorTablePointer};
 
 lazy_static! {

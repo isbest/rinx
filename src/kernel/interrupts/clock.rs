@@ -1,8 +1,7 @@
-use spin::Mutex;
-
 use crate::kernel::interrupts::handler::set_interrupt_handler;
 use crate::kernel::interrupts::pic::pic_controller::send_eoi;
 use crate::kernel::interrupts::{set_interrupt_mask, IRQ_CLOCK, IRQ_MASTER_NR};
+use crate::kernel::sync::mutex::Mutex;
 use crate::kernel::tasks::task::Task;
 use crate::KERNEL_MAGIC;
 

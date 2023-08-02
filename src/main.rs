@@ -37,7 +37,6 @@ pub extern "C" fn rust_main() -> ! {
     init_system_call();
     // 开启外中断
     enable_interrupt(true);
-    info!("hello world, this is rust kernel");
 
     #[allow(clippy::empty_loop)]
     loop {}

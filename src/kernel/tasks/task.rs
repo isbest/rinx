@@ -13,10 +13,8 @@ use x86::bits32::paging::BASE_PAGE_SIZE;
 
 use crate::kernel::interrupts::clock::{JIFFIES, JIFFY};
 use crate::kernel::interrupts::{if_enabled, without_interrupt};
-use crate::kernel::tasks::{
-    BLOCK_TASK_LIST, IDLE_TASK, SLEEP_TASK_LIST, TASKS, TASKS_NUMBER,
-};
-use crate::libs::kernel_linked_list::Node;
+use crate::kernel::tasks::{IDLE_TASK, SLEEP_TASK_LIST, TASKS, TASKS_NUMBER};
+use crate::libs::kernel_linked_list::{LinkedList, Node};
 use crate::mm::page::KERNEL_PAGE_DIR;
 use crate::KERNEL_MAGIC;
 
@@ -231,7 +229,11 @@ impl Task {
         })
     }
 
-    pub unsafe fn block(mut task: Unique<Task>, state: TaskState) {
+    pub unsafe fn block(
+        mut task: Unique<Task>,
+        state: TaskState,
+        block_list: *mut LinkedList<()>,
+    ) {
         // 必须保证不可中断
         assert!(!if_enabled());
         assert_ne!(state, TaskState::TaskRunning);
@@ -241,9 +243,11 @@ impl Task {
         assert!(task.as_ref().node.prev.is_none());
 
         // 头插法
-        BLOCK_TASK_LIST
-            .lock()
-            .push_front_node(Unique::from(NonNull::from(&task.as_ref().node)));
+        if let Some(block_list) = block_list.as_mut() {
+            block_list.push_front_node(Unique::from(NonNull::from(
+                &task.as_ref().node,
+            )));
+        }
 
         task.as_mut().state = state;
 
@@ -254,13 +258,18 @@ impl Task {
         }
     }
 
-    pub unsafe fn unblock(mut task: Unique<Task>) {
+    pub unsafe fn unblock(
+        mut task: Unique<Task>,
+        block_list: *mut LinkedList<()>,
+    ) {
         // 必须保证不可中断
         assert!(!if_enabled());
 
-        BLOCK_TASK_LIST
-            .lock()
-            .unlink_node(NonNull::from(&task.as_ref().node));
+        // 节点移除队列
+        if let Some(block_list) = block_list.as_mut() {
+            block_list.unlink_node(NonNull::from(&task.as_ref().node));
+        }
+
         // 确保移出队列
         assert!(task.as_ref().node.next.is_none());
         assert!(task.as_ref().node.prev.is_none());

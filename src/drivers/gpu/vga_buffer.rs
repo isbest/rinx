@@ -1,9 +1,9 @@
 //! this is a simple vga buffer driver
 
+use crate::kernel::sync::mutex::Mutex;
 use core::fmt;
 use core::ops::{Deref, DerefMut};
 use lazy_static::lazy_static;
-use spin::Mutex;
 use volatile::Volatile;
 use x86::io::outb;
 

@@ -1,8 +1,8 @@
 use core::cmp::Ordering;
 use core::fmt;
 use core::fmt::Formatter;
-use spin::Mutex;
 
+use crate::kernel::sync::mutex::Mutex;
 use x86::io::{inb, outb};
 
 const CMOS_ADDRESS: u16 = 0x70;

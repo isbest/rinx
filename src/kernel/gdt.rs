@@ -1,7 +1,7 @@
+use crate::kernel::sync::mutex::Mutex;
 use crate::kernel::{len_of_limit, limit_of_type};
 use core::slice;
 use lazy_static::lazy_static;
-use spin::Mutex;
 use x86::dtables::{lgdt, sgdt, DescriptorTablePointer};
 use x86::segmentation::Descriptor;
 
