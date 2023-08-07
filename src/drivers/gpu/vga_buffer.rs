@@ -1,10 +1,10 @@
 //! this is a simple vga buffer driver
 
 use crate::kernel::sync::mutex::Mutex;
-use core::fmt;
 use core::ops::{Deref, DerefMut};
+use core::ptr::Unique;
+use core::{fmt, ptr};
 use lazy_static::lazy_static;
-use volatile::Volatile;
 use x86::io::outb;
 
 /// vga text mode buffer width
@@ -117,7 +117,37 @@ impl DerefMut for VgaChar {
 #[repr(transparent)]
 struct VgaBuffer {
     /// vga buffer
-    chars: [[Volatile<VgaChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
+    chars: [[VgaChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
+}
+
+impl VgaBuffer {
+    pub unsafe fn write_volatile(
+        &mut self,
+        row: usize,
+        col: usize,
+        byte: VgaChar,
+    ) {
+        ptr::write_volatile::<VgaChar>(
+            &self.chars[row][col] as *const VgaChar as *mut VgaChar,
+            byte,
+        );
+    }
+
+    pub unsafe fn read_volatile(&self, row: usize, col: usize) -> VgaChar {
+        ptr::read_volatile(&self.chars[row][col] as *const VgaChar)
+    }
+
+    /// 拷贝一行数据到目标行
+    pub unsafe fn copy_line(&mut self, src_row: usize, target_row: usize) {
+        // 校验
+        if src_row >= self.chars.len() || target_row >= self.chars.len() {
+            return;
+        }
+
+        for i in 0..BUFFER_WIDTH {
+            self.write_volatile(target_row, i, self.read_volatile(src_row, i));
+        }
+    }
 }
 
 /// char writer
@@ -126,8 +156,8 @@ pub struct Writer {
     col_position: usize,
     row_position: usize,
     cursor_position: u16,
-    // 静态 可变
-    buffer: &'static mut VgaBuffer,
+    // 可变
+    buffer: Unique<VgaBuffer>,
 }
 
 impl Writer {
@@ -137,7 +167,9 @@ impl Writer {
             row_position: 0,
             cursor_position: 0,
             color_code: VgaColor::default(),
-            buffer: unsafe { &mut *(VGA_BUFFER_ADDR as *mut VgaBuffer) },
+            buffer: unsafe {
+                Unique::new_unchecked(VGA_BUFFER_ADDR as *mut VgaBuffer)
+            },
         };
 
         // 清空屏幕
@@ -162,10 +194,17 @@ impl Writer {
                     col = self.col_position;
                 }
                 // 写入字符
-                self.buffer.chars[row][col].write(VgaChar {
-                    ascii_chara: byte,
-                    color_code,
-                });
+                unsafe {
+                    self.buffer.as_mut().write_volatile(
+                        row,
+                        col,
+                        VgaChar {
+                            ascii_chara: byte,
+                            color_code,
+                        },
+                    );
+                }
+
                 // 维护指针索引+1
                 self.col_position += 1;
 
@@ -191,10 +230,8 @@ impl Writer {
             self.row_position += 1;
         } else {
             for row in 1..BUFFER_HEIGHT {
-                for col in 0..BUFFER_WIDTH {
-                    let character = self.buffer.chars[row][col].read();
-                    // 倒腾字符
-                    self.buffer.chars[row - 1][col].write(character);
+                unsafe {
+                    self.buffer.as_mut().copy_line(row, row - 1);
                 }
             }
             // 清空最后一行
@@ -214,7 +251,9 @@ impl Writer {
         };
 
         for col in 0..BUFFER_WIDTH {
-            self.buffer.chars[row][col].write(blank);
+            unsafe {
+                self.buffer.as_mut().write_volatile(row, col, blank);
+            }
         }
     }
 
