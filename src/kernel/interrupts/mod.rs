@@ -1,3 +1,4 @@
+use crate::drivers::keyboard::init_keyboard;
 use crate::kernel::interrupts::clock::init_clock;
 use crate::kernel::interrupts::handler_entry::InterruptEntry;
 use crate::kernel::interrupts::idt::init_idt;
@@ -56,6 +57,7 @@ pub fn init_interrupt() {
     init_pic();
     init_idt();
     init_clock();
+    init_keyboard();
 }
 
 /// 开启外中断
