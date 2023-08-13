@@ -4,8 +4,6 @@ use core::ptr::Unique;
 use crate::kernel::tasks::task::Task;
 use crate::kernel::tasks::thread::idle::idle;
 use crate::kernel::tasks::thread::init::init;
-use crate::kernel::tasks::thread::test::test;
-use crate::kernel::tasks::thread::test2::test2;
 use crate::libs::kernel_linked_list::LinkedList;
 use crate::KERNEL_MAGIC;
 
@@ -42,7 +40,5 @@ pub fn init_task() {
         // idle任务优先级为1,永远不会被调度,除非没有就绪任务
         IDLE_TASK = Task::create(idle, "idle", 1, KERNEL_USER);
         Task::create(init, "init", 5, NORMAL_USER);
-        Task::create(test, "test1", 5, NORMAL_USER);
-        Task::create(test2, "test2", 5, NORMAL_USER);
     }
 }

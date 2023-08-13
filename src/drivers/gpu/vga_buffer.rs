@@ -1,7 +1,6 @@
 //! this is a simple vga buffer driver
 
 use crate::kernel::sync::mutex::Mutex;
-use core::ops::{Deref, DerefMut};
 use core::ptr::Unique;
 use core::{fmt, ptr};
 use lazy_static::lazy_static;
@@ -99,17 +98,12 @@ struct VgaChar {
     color_code: VgaColor,
 }
 
-impl Deref for VgaChar {
-    type Target = VgaChar;
-
-    fn deref(&self) -> &Self::Target {
-        self
-    }
-}
-
-impl DerefMut for VgaChar {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut (*self)
+impl Default for VgaChar {
+    fn default() -> Self {
+        VgaChar {
+            ascii_chara: b' ',
+            color_code: VgaColor::default(),
+        }
     }
 }
 
@@ -214,11 +208,35 @@ impl Writer {
         }
     }
 
+    // 退格键
+    pub fn backspace(&mut self) {
+        // 更新索引,防止越界
+        if self.col_position == 0 && self.row_position > 0 {
+            self.row_position -= 1;
+            self.col_position = BUFFER_WIDTH - 1;
+        } else if self.col_position > 0 {
+            self.col_position -= 1;
+        }
+
+        // 设置为空
+        unsafe {
+            self.buffer.as_mut().write_volatile(
+                self.row_position,
+                self.col_position,
+                VgaChar::default(),
+            );
+        }
+
+        // 更新光标位置
+        self.update_cursor();
+    }
+
     /// 打印字符串,不可见字符统一用0xfe代替
     pub fn write_string(&mut self, s: &str) {
         for byte in s.bytes() {
             match byte {
                 0x20..=0x7e | b'\n' => self.write_byte(byte),
+                0x08 => self.backspace(),
                 _ => self.write_byte(0xfe),
             }
         }
@@ -300,7 +318,7 @@ impl fmt::Write for Writer {
                 self.color_code = VgaColor::with_black_bg(Color::from(93));
             }
             "\x1b[0m" => {
-                self.color_code = VgaColor::with_black_bg(Color::White);
+                self.color_code = VgaColor::default();
             }
             _ => {
                 self.write_string(text);
