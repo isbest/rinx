@@ -1,9 +1,10 @@
+use core::cell::UnsafeCell;
+use core::ops::{Deref, DerefMut};
+
 use crate::kernel::interrupts::without_interrupt;
 use crate::kernel::system_call::sys_call::sys_yield;
 use crate::kernel::tasks::task::{Task, TaskState};
 use crate::libs::kernel_linked_list::LinkedList;
-use core::cell::UnsafeCell;
-use core::ops::{Deref, DerefMut};
 
 pub struct Mutex<T> {
     inner: InnerMutex<T>,
@@ -42,6 +43,11 @@ impl<T> Mutex<T> {
             inner: self.inner.lock(),
         }
     }
+
+    /// 不安全方法,不获取锁,直接获取data
+    pub(crate) unsafe fn get_data(&self) -> &UnsafeCell<T> {
+        &self.inner.data
+    }
 }
 
 impl<T> InnerMutex<T> {
@@ -64,7 +70,7 @@ impl<T> InnerMutex<T> {
                 Task::block(
                     current_task,
                     TaskState::TaskBlocked,
-                    self.waite_list.get(),
+                    Some(self.waite_list.get()),
                 )
             }
 
@@ -100,12 +106,10 @@ impl<'a, T: ?Sized> Drop for InnerMutexGuard<'a, T> {
             *self.lock.get() = false;
 
             if let Some(tail_node) = (*self.waite_list.get()).end_node() {
-                let first_block_task = Task::get_task(tail_node);
-
-                if let Some(first_task) = first_block_task {
-                    Task::unblock(first_task, self.waite_list.get());
-                }
-
+                Task::unblock(
+                    Task::get_task(tail_node),
+                    Some(self.waite_list.get()),
+                );
                 sys_yield();
             }
         });

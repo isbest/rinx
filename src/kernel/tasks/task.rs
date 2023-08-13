@@ -13,7 +13,9 @@ use x86::bits32::paging::BASE_PAGE_SIZE;
 
 use crate::kernel::interrupts::clock::{JIFFIES, JIFFY};
 use crate::kernel::interrupts::{if_enabled, without_interrupt};
-use crate::kernel::tasks::{IDLE_TASK, SLEEP_TASK_LIST, TASKS, TASKS_NUMBER};
+use crate::kernel::tasks::{
+    DEFAULT_BLOCK_LINKED_LIST, IDLE_TASK, SLEEP_TASK_LIST, TASKS, TASKS_NUMBER,
+};
 use crate::libs::kernel_linked_list::{LinkedList, Node};
 use crate::mm::page::KERNEL_PAGE_DIR;
 use crate::KERNEL_MAGIC;
@@ -232,7 +234,7 @@ impl Task {
     pub unsafe fn block(
         mut task: NonNull<Task>,
         state: TaskState,
-        block_list: *mut LinkedList<()>,
+        block_list: Option<*mut LinkedList<()>>,
     ) {
         // 必须保证不可中断
         assert!(!if_enabled());
@@ -242,11 +244,19 @@ impl Task {
         assert!(task.as_ref().node.next.is_none());
         assert!(task.as_ref().node.prev.is_none());
 
-        // 头插法
-        if let Some(block_list) = block_list.as_mut() {
-            block_list.push_front_node(Unique::from(NonNull::from(
-                &task.as_ref().node,
-            )));
+        // 增加默认的阻塞队列
+        if let Some(block_list) = block_list {
+            // 头插法
+            if let Some(block_list) = block_list.as_mut() {
+                block_list.push_front_node(Unique::from(NonNull::from(
+                    &task.as_ref().node,
+                )));
+            }
+        } else {
+            // 插入默认队列
+            DEFAULT_BLOCK_LINKED_LIST.push_front_node(Unique::from(
+                NonNull::from(&task.as_ref().node),
+            ))
         }
 
         task.as_mut().state = state;
@@ -259,15 +269,28 @@ impl Task {
     }
 
     pub unsafe fn unblock(
-        mut task: NonNull<Task>,
-        block_list: *mut LinkedList<()>,
+        task: Option<NonNull<Task>>,
+        block_list: Option<*mut LinkedList<()>>,
     ) {
+        if task.is_none() {
+            return;
+        }
+
+        // shadow
+        let mut task = task.unwrap();
+
         // 必须保证不可中断
         assert!(!if_enabled());
 
-        // 节点移除队列
-        if let Some(block_list) = block_list.as_mut() {
-            block_list.unlink_node(NonNull::from(&task.as_ref().node));
+        // 增加默认的阻塞队列
+        if let Some(block_list) = block_list {
+            // 节点移除队列
+            if let Some(block_list) = block_list.as_mut() {
+                block_list.unlink_node(NonNull::from(&task.as_ref().node));
+            }
+        } else {
+            DEFAULT_BLOCK_LINKED_LIST
+                .unlink_node(NonNull::from(&task.as_ref().node))
         }
 
         // 确保移出队列

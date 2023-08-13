@@ -15,6 +15,8 @@ const TASKS_NUMBER: usize = 64;
 /// 任务列表
 static TASKS: Mutex<[Option<Unique<Task>>; TASKS_NUMBER]> =
     Mutex::new([None; TASKS_NUMBER]);
+/// 默认的阻塞队列
+static mut DEFAULT_BLOCK_LINKED_LIST: LinkedList<()> = LinkedList::new();
 
 /// IDLE任务指针
 static mut IDLE_TASK: Unique<Task> = Unique::dangling();
