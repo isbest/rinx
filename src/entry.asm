@@ -8,5 +8,6 @@
 
   call memory_init
   call init_gdt
+  call init_tss
   call init_mem_mapping
   call rust_main

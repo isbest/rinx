@@ -1,6 +1,6 @@
 use core::mem::size_of;
 
-pub mod gdt;
+pub mod global;
 pub mod interrupts;
 pub mod logger;
 pub mod sync;
