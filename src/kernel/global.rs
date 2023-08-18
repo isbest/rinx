@@ -25,7 +25,7 @@ const USER_CODE_IDX: usize = 4;
 /// 用户数据段全局描述符表索引
 const USER_DATA_IDX: usize = 5;
 
-const KERNEL_CODE_SELECTOR: SegmentSelector =
+pub const KERNEL_CODE_SELECTOR: SegmentSelector =
     SegmentSelector::new(KERNEL_CODE_IDX as _, Ring0);
 const KERNEL_DATA_SELECTOR: SegmentSelector =
     SegmentSelector::new(KERNEL_DATA_IDX as _, Ring0);

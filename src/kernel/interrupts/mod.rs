@@ -1,6 +1,5 @@
 use crate::drivers::keyboard::init_keyboard;
 use crate::kernel::interrupts::clock::init_clock;
-use crate::kernel::interrupts::handler_entry::InterruptEntry;
 use crate::kernel::interrupts::idt::init_idt;
 use crate::kernel::interrupts::pic::pic_controller::init_pic;
 use crate::kernel::interrupts::pic::{PIC_M_DATA, PIC_S_DATA};
@@ -8,7 +7,6 @@ use core::arch::asm;
 use x86::bits32::eflags::{self, EFlags};
 
 pub mod clock;
-pub mod entry;
 pub mod handler;
 pub mod handler_entry;
 pub mod idt;
