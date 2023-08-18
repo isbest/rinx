@@ -129,19 +129,32 @@ pub extern "C" fn interrupt_entry() {
         // 压入中断向量,此时栈顶就有两个中断向量了
         "pushl %eax",
         // 调用指定的处理函数
-        "call *{}(,%eax,4)",
+        "call *{0}(,%eax,4)",
         // 中断向量出栈
-        "add $4, %esp",
-        // 恢复上下文
-        "popa",
-        "pop %gs",
-        "pop %fs",
-        "pop %es",
-        "pop %ds",
-        "add $8, %esp",
-        "iret",
+        "jmp {1}",
         sym INTERRUPT_HANDLER_TABLE,
+        sym interrupt_exit,
         options(noreturn, att_syntax)
+        )
+    }
+}
+
+#[naked]
+#[link_section = ".text"]
+pub extern "C" fn interrupt_exit() {
+    unsafe {
+        asm!(
+            // 中断向量出栈
+            "add $4, %esp",
+            // 恢复上下文
+            "popa",
+            "pop %gs",
+            "pop %fs",
+            "pop %es",
+            "pop %ds",
+            "add $8, %esp",
+            "iret",
+            options(noreturn, att_syntax)
         )
     }
 }
