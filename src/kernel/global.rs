@@ -1,9 +1,8 @@
-use crate::kernel::limit_of_type;
 use crate::kernel::sync::mutex::Mutex;
 use core::mem::size_of;
 use lazy_static::lazy_static;
 use x86::bits32::task::TaskStateSegment;
-use x86::dtables::{lgdt, sgdt, DescriptorTablePointer};
+use x86::dtables::{lgdt, DescriptorTablePointer};
 use x86::segmentation::GateDescriptorBuilder;
 use x86::segmentation::{
     BuildDescriptor, CodeSegmentType, DataSegmentType, Descriptor,
@@ -26,6 +25,17 @@ const USER_CODE_IDX: usize = 4;
 /// 用户数据段全局描述符表索引
 const USER_DATA_IDX: usize = 5;
 
+const KERNEL_CODE_SELECTOR: SegmentSelector =
+    SegmentSelector::new(KERNEL_CODE_IDX as _, Ring0);
+const KERNEL_DATA_SELECTOR: SegmentSelector =
+    SegmentSelector::new(KERNEL_DATA_IDX as _, Ring0);
+const KERNEL_TSS_SELECTOR: SegmentSelector =
+    SegmentSelector::new(KERNEL_TSS_IDX as _, Ring0);
+const USER_CODE_SELECTOR: SegmentSelector =
+    SegmentSelector::new(USER_CODE_IDX as _, Ring3);
+const USER_DATA_SELECTOR: SegmentSelector =
+    SegmentSelector::new(USER_DATA_IDX as _, Ring3);
+
 /// TSS描述符
 static mut TSS: TaskStateSegment = TaskStateSegment::new();
 
@@ -40,11 +50,6 @@ lazy_static! {
 
 #[no_mangle]
 pub fn init_gdt() {
-    let mut gdtr: DescriptorTablePointer<Descriptor> = Default::default();
-    unsafe {
-        sgdt(&mut gdtr);
-    }
-
     // 内核代码段
     let mut gdt_guard = GDT.lock();
 
@@ -96,11 +101,10 @@ pub fn init_gdt() {
     .dpl(Ring3) // 3特权级
     .finish();
 
-    gdtr.base = gdt_guard.as_ptr();
-    gdtr.limit = limit_of_type::<[Descriptor; GDT_SIZE]>();
-
     unsafe {
-        lgdt(&gdtr);
+        lgdt(&DescriptorTablePointer::<[Descriptor; GDT_SIZE]>::new(
+            &gdt_guard,
+        ));
     }
 }
 
@@ -109,7 +113,7 @@ pub fn init_gdt() {
 pub fn init_tss() {
     unsafe {
         // 0特权级别数据段 使用内核数据段描述符,请求特级0
-        TSS.ss0 = SegmentSelector::new(KERNEL_DATA_IDX as u16, Ring0).bits();
+        TSS.ss0 = KERNEL_DATA_SELECTOR.bits();
     }
 
     GDT.lock()[KERNEL_TSS_IDX] =
@@ -123,6 +127,6 @@ pub fn init_tss() {
         .finish();
 
     unsafe {
-        load_tr(SegmentSelector::new(KERNEL_TSS_IDX as u16, Ring0));
+        load_tr(KERNEL_TSS_SELECTOR);
     }
 }
