@@ -1,5 +1,5 @@
 use crate::kernel::system_call::SYS_CALL_SIZE;
-use crate::println;
+use crate::println_kernel;
 
 type SystemCall = extern "C" fn(u32, u32, u32, u32) -> u32;
 
@@ -18,6 +18,6 @@ pub extern "C" fn default_sys_call(
     edx: u32,
     vector: u32,
 ) -> u32 {
-    println!("vector:{}, eax:{}, ebx:{} ecx:{}", vector, ebx, ecx, edx);
+    println_kernel!("vector:{}, eax:{}, ebx:{} ecx:{}", vector, ebx, ecx, edx);
     0
 }

@@ -31,13 +31,13 @@ const KERNEL_DATA_SELECTOR: SegmentSelector =
     SegmentSelector::new(KERNEL_DATA_IDX as _, Ring0);
 const KERNEL_TSS_SELECTOR: SegmentSelector =
     SegmentSelector::new(KERNEL_TSS_IDX as _, Ring0);
-const USER_CODE_SELECTOR: SegmentSelector =
+pub const USER_CODE_SELECTOR: SegmentSelector =
     SegmentSelector::new(USER_CODE_IDX as _, Ring3);
-const USER_DATA_SELECTOR: SegmentSelector =
+pub const USER_DATA_SELECTOR: SegmentSelector =
     SegmentSelector::new(USER_DATA_IDX as _, Ring3);
 
 /// TSS描述符
-static mut TSS: TaskStateSegment = TaskStateSegment::new();
+pub static mut TSS: TaskStateSegment = TaskStateSegment::new();
 
 // 内核全局描述符
 lazy_static! {
@@ -119,11 +119,10 @@ pub fn init_tss() {
     GDT.lock()[KERNEL_TSS_IDX] =
         <DescriptorBuilder as GateDescriptorBuilder<u32>>::tss_descriptor(
             unsafe { &TSS as *const TaskStateSegment as u64 },
-            size_of::<TaskStateSegment>() as u64,
+            size_of::<TaskStateSegment>() as u64 - 1,
             true,
         )
         .present() // 存在内存
-        .dpl(Ring0) // 特权级0
         .finish();
 
     unsafe {

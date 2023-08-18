@@ -335,13 +335,13 @@ lazy_static! {
 }
 
 #[macro_export]
-macro_rules! println {
+macro_rules! println_kernel {
     () => (print!("\n"));
-    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::print_kernel!("{}\n", format_args!($($arg)*)));
 }
 
 #[macro_export]
-macro_rules! print {
+macro_rules! print_kernel {
     ($($arg:tt)*) => ($crate::drivers::gpu::vga_buffer::_print(format_args!($($arg)*)));
 }
 

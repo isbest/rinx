@@ -1,7 +1,6 @@
 use crate::error;
 use crate::kernel::interrupts::handler_entry::InterruptHandler;
 use crate::kernel::interrupts::{ENTRY_SIZE, IDT_SIZE};
-use x86::irq::PageFaultError;
 
 // 中断函数表
 #[no_mangle]
@@ -45,11 +44,6 @@ pub extern "C" fn default_exception_handler(
     eflags: u32,
 ) {
     use x86::irq::EXCEPTIONS;
-
-    if vector == 14 {
-        let page_error = PageFaultError::from_bits_truncate(error_code);
-        error!("[PageError] {}", page_error);
-    }
 
     if vector < 22 {
         error!(

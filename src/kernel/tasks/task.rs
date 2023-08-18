@@ -9,21 +9,24 @@ use core::mem::size_of;
 use core::ptr::{NonNull, Unique};
 use core::{mem, ptr};
 
+use crate::kernel::global::{TSS, USER_CODE_SELECTOR, USER_DATA_SELECTOR};
 use x86::bits32::paging::BASE_PAGE_SIZE;
 
 use crate::kernel::interrupts::clock::{JIFFIES, JIFFY};
+use crate::kernel::interrupts::handler_entry::interrupt_exit;
 use crate::kernel::interrupts::{if_enabled, without_interrupt};
 use crate::kernel::tasks::{
-    DEFAULT_BLOCK_LINKED_LIST, IDLE_TASK, SLEEP_TASK_LIST, TASKS, TASKS_NUMBER,
+    DEFAULT_BLOCK_LINKED_LIST, IDLE_TASK, KERNEL_USER, SLEEP_TASK_LIST, TASKS,
+    TASKS_NUMBER,
 };
 use crate::libs::kernel_linked_list::{LinkedList, Node};
 use crate::mm::page::KERNEL_PAGE_DIR;
 use crate::KERNEL_MAGIC;
 
-type TargetFn = fn() -> u32;
+type TargetFn = fn() -> !;
 
 /// 任务,用一页表示一个任务,用栈底信息(页开始的地方表示这个任务)
-/// 按照4096个字节对齐
+/// 按照4096个字节对齐, PCB处于低地址
 #[repr(C)]
 #[repr(align(4096))]
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -48,6 +51,40 @@ pub struct Task {
     pub pde: u32,
     // 魔数
     pub magic_number: u32,
+}
+
+/// 任务上下文,切换前保存,切换后恢复
+pub struct TaskFrame {
+    edi: u32,
+    esi: u32,
+    ebx: u32,
+    ebp: u32,
+    eip: Option<TargetFn>,
+}
+
+/// 中断帧,进入用户模式是以模拟中断返回的方式进行的
+#[repr(C, packed)]
+pub struct IntrFrame {
+    vector: u32,
+    edi: u32,
+    esi: u32,
+    ebp: u32,
+    esp_dummy: u32,
+    ebx: u32,
+    edx: u32,
+    ecx: u32,
+    eax: u32,
+    gs: u32,
+    fs: u32,
+    es: u32,
+    ds: u32,
+    vector0: u32,
+    error: u32,
+    eip: u32,
+    cs: u32,
+    eflags: u32,
+    esp: u32,
+    ss: u32,
 }
 
 #[repr(C)]
@@ -75,15 +112,6 @@ impl Display for TaskState {
             TaskState::TaskDied => f.write_str("Died"),
         }
     }
-}
-
-/// 任务上下文,切换前保存,切换后恢复
-pub struct TaskFrame {
-    edi: u32,
-    esi: u32,
-    ebx: u32,
-    ebp: u32,
-    eip: Option<TargetFn>,
 }
 
 impl Task {
@@ -172,6 +200,7 @@ impl Task {
             return;
         }
 
+        Task::task_activate(next);
         task_switch(next.as_ptr());
     }
 
@@ -378,6 +407,59 @@ impl Task {
             }
         }
     }
+
+    /// 返回用户模式,模拟中断返回
+    pub unsafe fn task_to_user_mode(target: TargetFn) {
+        let task = Task::current_task();
+
+        let mut intr_frame = Task::get_intr_frame(task);
+
+        let intr_frame = intr_frame.as_mut();
+        // 假装发生了时钟中断 嘿嘿
+        intr_frame.vector = 0x20;
+        intr_frame.edi = 1;
+        intr_frame.esi = 2;
+        intr_frame.ebp = 3;
+        intr_frame.esp_dummy = 4;
+        intr_frame.ebx = 5;
+        intr_frame.edx = 6;
+        intr_frame.ecx = 7;
+        intr_frame.eax = 8;
+
+        intr_frame.gs = 0;
+        intr_frame.ds = USER_DATA_SELECTOR.bits() as _;
+        intr_frame.es = USER_DATA_SELECTOR.bits() as _;
+        intr_frame.fs = USER_DATA_SELECTOR.bits() as _;
+        intr_frame.ss = USER_DATA_SELECTOR.bits() as _;
+        intr_frame.cs = USER_CODE_SELECTOR.bits() as _;
+
+        intr_frame.error = KERNEL_MAGIC;
+        intr_frame.eip = target as usize as _;
+        intr_frame.eflags = 0b10 | 1 << 9;
+
+        let task_layout =
+            Layout::from_size_align(size_of::<Task>(), BASE_PAGE_SIZE).unwrap();
+        // 用户栈地址
+        intr_frame.esp = (alloc(task_layout) as usize + BASE_PAGE_SIZE) as _;
+
+        // 模拟中断返回
+        asm!(
+            "xchg bx, bx",
+            "mov esp, {0}",
+            "jmp {1}",
+            in(reg) intr_frame,
+            sym interrupt_exit,
+            options(noreturn, nostack)
+        );
+    }
+
+    pub unsafe fn task_activate(task: Unique<Task>) {
+        assert_eq!(task.as_ref().magic_number, KERNEL_MAGIC);
+
+        if task.as_ref().uid != KERNEL_USER {
+            TSS.esp0 = (task.as_ptr() as usize + BASE_PAGE_SIZE) as _;
+        }
+    }
 }
 
 /// private func
@@ -401,6 +483,16 @@ impl Task {
                     as *mut Task,
             )
         }
+    }
+
+    fn get_intr_frame(task: NonNull<Task>) -> NonNull<IntrFrame> {
+        // 计算上下文的地址
+        // 栈是从高地址向低地址增长的,任务是从一页的起始位置开始分配的
+        // 把一页的末尾(高地址)用来保存任务上下文,那么上下文的起始地址就是内核栈的栈底
+        let stack =
+            task.as_ptr() as usize + BASE_PAGE_SIZE - size_of::<IntrFrame>();
+        let frame = stack as *mut IntrFrame;
+        unsafe { NonNull::new_unchecked(frame) }
     }
 }
 

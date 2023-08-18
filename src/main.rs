@@ -47,7 +47,7 @@ pub extern "C" fn rust_main() -> ! {
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    println!("{}", info);
+    println_kernel!("{}", info);
     loop {
         unsafe {
             halt();

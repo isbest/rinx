@@ -1,15 +1,16 @@
-use crate::drivers::keyboard::read_keyboard;
-use crate::kernel::interrupts::{enable_interrupt, without_interrupt};
-use crate::print;
+use crate::kernel::system_call::sys_call::sys_sleep;
+use crate::kernel::tasks::task::Task;
 
-pub(crate) fn init() -> u32 {
-    enable_interrupt(true);
+pub(crate) fn init() -> ! {
+    let mut use_stack = [' '; 10];
+    use_stack[9] = 'a';
+    unsafe { Task::task_to_user_mode(real_init) }
+    #[warn(clippy::empty_loop)]
+    loop {}
+}
 
-    let mut buffer = [' '; 1];
+fn real_init() -> ! {
     loop {
-        without_interrupt(|| {
-            read_keyboard(&mut buffer);
-            buffer.iter().for_each(|ch| print!("{ch}"));
-        });
+        sys_sleep(500);
     }
 }

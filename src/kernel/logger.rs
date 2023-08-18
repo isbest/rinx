@@ -1,53 +1,53 @@
 #[macro_export]
 macro_rules! info {
-    () => ($crate::print!("\n"));
+    () => ($crate::print_kernel!("\n"));
     ($($arg:tt)*) => {
-        $crate::print!("\x1b[32m");
+        $crate::print_kernel!("\x1b[32m");
         $crate::drivers::gpu::vga_buffer::_print(format_args!($($arg)*));
-        $crate::print!("\n");
-        $crate::print!("\x1b[0m");
+        $crate::print_kernel!("\n");
+        $crate::print_kernel!("\x1b[0m");
     };
 }
 
 #[macro_export]
 macro_rules! warn {
-    () => ($crate::print!("\n"));
+    () => ($crate::print_kernel!("\n"));
     ($($arg:tt)*) => {
-        $crate::print!("\x1b[93m");
+        $crate::print_kernel!("\x1b[93m");
         $crate::drivers::gpu::vga_buffer::_print(format_args!($($arg)*));
-        $crate::print!("\n");
-        $crate::print!("\x1b[0m");
+        $crate::print_kernel!("\n");
+        $crate::print_kernel!("\x1b[0m");
     };
 }
 
 #[macro_export]
 macro_rules! error {
-    () => ($crate::print!("\n"));
+    () => ($crate::print_kernel!("\n"));
     ($($arg:tt)*) => {
-        $crate::print!("\x1b[31m");
+        $crate::print_kernel!("\x1b[31m");
         $crate::drivers::gpu::vga_buffer::_print(format_args!($($arg)*));
-        $crate::print!("\n");
-        $crate::print!("\x1b[0m");
+        $crate::print_kernel!("\n");
+        $crate::print_kernel!("\x1b[0m");
     };
 }
 
 #[macro_export]
 macro_rules! debug {
-    () => ($crate::print!("\n"));
+    () => ($crate::print_kernel!("\n"));
     ($($arg:tt)*) => {
-        $crate::print!("\x1b[36m");
+        $crate::print_kernel!("\x1b[36m");
         $crate::drivers::gpu::vga_buffer::_print(format_args!($($arg)*));
-        $crate::print!("\n");
-        $crate::print!("\x1b[0m");
+        $crate::print_kernel!("\n");
+        $crate::print_kernel!("\x1b[0m");
     };
 }
 #[macro_export]
 macro_rules! trace {
-    () => ($crate::print!("\n"));
+    () => ($crate::print_kernel!("\n"));
     ($($arg:tt)*) => {
-        $crate::print!("\x1b[90m");
+        $crate::print_kernel!("\x1b[90m");
         $crate::drivers::gpu::vga_buffer::_print(format_args!($($arg)*));
-        $crate::print!("\n");
-        $crate::print!("\x1b[0m");
+        $crate::print_kernel!("\n");
+        $crate::print_kernel!("\x1b[0m");
     };
 }
