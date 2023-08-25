@@ -2,7 +2,7 @@
   <configuration default="false" name="rnix" type="CLion_Remote" focusToolWindowBeforeRun="true" version="1" remoteCommand=":9001" symbolFile="$PROJECT_DIR$/build/x86-rnix_os/debug/rnix" sysroot="">
     <debugger kind="GDB">$USER_HOME$/.cargo/bin/rust-gdb</debugger>
     <method v="2">
-      <option name="ToolBeforeRunTask" enabled="true" actionId="Tool_External Tools_qemug" />
+      <option name="ToolBeforeRunTask" enabled="true" actionId="Tool_External Tools_qemu-rnix" />
     </method>
   </configuration>
 </component>

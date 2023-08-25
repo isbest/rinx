@@ -37,7 +37,7 @@ pub extern "C" fn rust_main() -> ! {
     init_system_call();
     // 先打印,后开启外中断
     // 否则引导任务可能被扔进等待队列
-    info!("hello world, this is rust kernel");
+    printlnk!("hello world, this is rust kernel");
     // 开启外中断
     enable_interrupt(true);
 
@@ -47,7 +47,7 @@ pub extern "C" fn rust_main() -> ! {
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    println_kernel!("{}", info);
+    printlnk!("{}", info);
     loop {
         unsafe {
             halt();

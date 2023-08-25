@@ -1,6 +1,6 @@
-use crate::error;
 use crate::kernel::interrupts::handler_entry::InterruptHandler;
 use crate::kernel::interrupts::{ENTRY_SIZE, IDT_SIZE};
+use crate::printlnk;
 
 // 中断函数表
 #[no_mangle]
@@ -46,15 +46,16 @@ pub extern "C" fn default_exception_handler(
     use x86::irq::EXCEPTIONS;
 
     if vector < 22 {
-        error!(
+        printlnk!(
             "[EXCEPTION] {}, {}",
-            EXCEPTIONS[vector as usize], error_code
+            EXCEPTIONS[vector as usize],
+            error_code
         );
     } else {
-        error!("[EXCEPTION] {}, {}", EXCEPTIONS[15], error_code);
+        printlnk!("[EXCEPTION] {}, {}", EXCEPTIONS[15], error_code);
     }
 
-    error!(
+    printlnk!(
         r#"
 VECTOR:{}
  ERROR:{}
@@ -66,7 +67,16 @@ EFLAGS:{}
    FS:{}
    ES:{}
    GS:{}"#,
-        vector, error_code, eflags, cs, eip, esp, ds, fs, es, gs
+        vector,
+        error_code,
+        eflags,
+        cs,
+        eip,
+        esp,
+        ds,
+        fs,
+        es,
+        gs
     );
     #[allow(clippy::empty_loop)]
     loop {}

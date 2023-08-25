@@ -1,5 +1,5 @@
-use crate::debug;
 use crate::kernel::interrupts::pic::pic_controller::send_eoi;
+use crate::printlnk;
 
 #[allow(clippy::too_many_arguments)]
 #[no_mangle]
@@ -24,6 +24,8 @@ pub extern "C" fn default_external_handler(
     _eflags: u32,
 ) {
     // 中断结束
-    debug!("[EXTERNAL INTERRUPT] vector: {vector}, error code: {error_code}");
+    printlnk!(
+        "[EXTERNAL INTERRUPT] vector: {vector}, error code: {error_code}"
+    );
     send_eoi(vector);
 }

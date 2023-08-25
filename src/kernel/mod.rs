@@ -1,6 +1,5 @@
 pub mod global;
 pub mod interrupts;
-pub mod logger;
 pub mod sync;
 pub mod system_call;
 pub mod tasks;

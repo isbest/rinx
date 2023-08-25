@@ -1,4 +1,4 @@
-use crate::drivers::gpu::vga_buffer::WRITER;
+use crate::drivers::gpu::vga_driver::CONSOLE;
 use crate::kernel::system_call::sys_call::SysCall;
 use crate::kernel::system_call::sys_call_3;
 use core::ptr::slice_from_raw_parts;
@@ -21,6 +21,6 @@ pub(crate) extern "C" fn write_char(
     _vector: usize,
 ) -> usize {
     let slice = unsafe { &*slice_from_raw_parts(ptr as *const u8, len) };
-    WRITER.lock().write_bytes(slice);
+    CONSOLE.lock().write_bytes(slice);
     len
 }
