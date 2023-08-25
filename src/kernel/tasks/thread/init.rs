@@ -6,8 +6,7 @@ pub(crate) fn init() -> ! {
     let mut use_stack = [' '; 10];
     use_stack[9] = 'a';
     unsafe { Task::task_to_user_mode(real_init) }
-    #[warn(clippy::empty_loop)]
-    loop {}
+    panic!("you will never back from user mode");
 }
 
 fn real_init() -> ! {
