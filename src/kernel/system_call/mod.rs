@@ -1,7 +1,9 @@
 mod gate;
+pub mod print;
 pub mod sys_call;
 
 use crate::kernel::system_call::gate::{default_sys_call, SYSTEM_CALL_TABLE};
+use crate::kernel::system_call::print::write_char;
 use crate::kernel::system_call::sys_call::{task_sleep, task_yield, SysCall};
 use core::arch::asm;
 
@@ -61,25 +63,59 @@ pub(crate) extern "C" fn sys_call_check(sys_call_number: u32) {
     );
 }
 
-pub(crate) fn sys_call(sys_call: SysCall) -> u32 {
-    let res: u32;
+pub(crate) fn sys_call(sys_call: SysCall) -> usize {
+    let res: usize;
     unsafe {
         asm!(
         "int $0x80",
-        inout("eax") sys_call as u32 => res,
+        inout("eax") sys_call as usize => res,
         options(att_syntax)
         );
         res
     }
 }
 
-pub(crate) fn sys_call_1(sys_call: SysCall, arg1: u32) -> u32 {
-    let res: u32;
+pub(crate) fn sys_call_1(sys_call: SysCall, arg1: usize) -> usize {
+    let res: usize;
     unsafe {
         asm!(
         "int $0x80",
-        inout("eax") sys_call as u32 => res,
+        inout("eax") sys_call as usize => res,
         in("ebx") arg1,
+        options(att_syntax)
+        );
+        res
+    }
+}
+
+pub(crate) fn sys_call_2(sys_call: SysCall, arg1: usize, arg2: usize) -> usize {
+    let res: usize;
+    unsafe {
+        asm!(
+        "int $0x80",
+        inout("eax") sys_call as usize => res,
+        in("ebx") arg1,
+        in("ecx") arg2,
+        options(att_syntax)
+        );
+        res
+    }
+}
+
+pub(crate) fn sys_call_3(
+    sys_call: SysCall,
+    arg1: usize,
+    arg2: usize,
+    arg3: usize,
+) -> usize {
+    let res: usize;
+    unsafe {
+        asm!(
+        "int $0x80",
+        inout("eax") sys_call as usize => res,
+        in("ebx") arg1,
+        in("ecx") arg2,
+        in("edx") arg3,
         options(att_syntax)
         );
         res
@@ -91,5 +127,6 @@ pub fn init_system_call() {
         SYSTEM_CALL_TABLE[SysCall::Test as usize] = default_sys_call;
         SYSTEM_CALL_TABLE[SysCall::Yield as usize] = task_yield;
         SYSTEM_CALL_TABLE[SysCall::Sleep as usize] = task_sleep;
+        SYSTEM_CALL_TABLE[SysCall::Write as usize] = write_char;
     }
 }

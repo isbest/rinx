@@ -242,6 +242,16 @@ impl Writer {
         }
     }
 
+    pub fn write_bytes(&mut self, bytes: &[u8]) {
+        for byte in bytes {
+            match byte {
+                0x20..=0x7e | b'\n' => self.write_byte(*byte),
+                0x08 => self.backspace(),
+                _ => self.write_byte(0xfe),
+            }
+        }
+    }
+
     /// 换行逻辑
     pub fn new_line(&mut self) {
         if self.row_position < BUFFER_HEIGHT - 1 {

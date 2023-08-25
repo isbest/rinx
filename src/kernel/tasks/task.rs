@@ -330,12 +330,12 @@ impl Task {
         task.as_mut().state = TaskState::TaskReady;
     }
 
-    pub unsafe fn sleep(ms: u32) {
+    pub unsafe fn sleep(ms: usize) {
         // 必须保证不可中断
         assert!(!if_enabled());
 
         // 计算需要睡眠的时间片
-        let mut sleep_ticks = ms as usize / JIFFY;
+        let mut sleep_ticks = ms / JIFFY;
         // 至少睡一个时间片
         if sleep_ticks == 0 {
             sleep_ticks = 1;

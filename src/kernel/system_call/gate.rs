@@ -1,7 +1,7 @@
 use crate::kernel::system_call::SYS_CALL_SIZE;
 use crate::println_kernel;
 
-type SystemCall = extern "C" fn(u32, u32, u32, u32) -> u32;
+type SystemCall = extern "C" fn(usize, usize, usize, usize) -> usize;
 
 #[no_mangle]
 pub static mut SYSTEM_CALL_TABLE: [SystemCall; SYS_CALL_SIZE] = {
@@ -13,11 +13,11 @@ pub static mut SYSTEM_CALL_TABLE: [SystemCall; SYS_CALL_SIZE] = {
 };
 
 pub extern "C" fn default_sys_call(
-    ebx: u32,
-    ecx: u32,
-    edx: u32,
-    vector: u32,
-) -> u32 {
+    ebx: usize,
+    ecx: usize,
+    edx: usize,
+    vector: usize,
+) -> usize {
     println_kernel!("vector:{}, eax:{}, ebx:{} ecx:{}", vector, ebx, ecx, edx);
     0
 }

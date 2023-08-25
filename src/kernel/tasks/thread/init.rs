@@ -1,3 +1,4 @@
+use crate::kernel::system_call::print::{sys_write, StdFd};
 use crate::kernel::system_call::sys_call::sys_sleep;
 use crate::kernel::tasks::task::Task;
 
@@ -12,5 +13,6 @@ pub(crate) fn init() -> ! {
 fn real_init() -> ! {
     loop {
         sys_sleep(500);
+        sys_write(StdFd::In, "hello");
     }
 }
