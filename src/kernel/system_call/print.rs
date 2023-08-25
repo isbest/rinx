@@ -15,12 +15,21 @@ pub fn sys_write(fd: StdFd, str: &str) {
 }
 
 pub(crate) extern "C" fn write_char(
-    _fd: usize,
+    fd: usize,
     ptr: usize,
     len: usize,
     _vector: usize,
 ) -> usize {
     let slice = unsafe { &*slice_from_raw_parts(ptr as *const u8, len) };
-    CONSOLE.lock().write_bytes(slice);
+
+    match fd {
+        1 | 2 => {
+            CONSOLE.lock().write_bytes(slice);
+        }
+        _ => {
+            panic!("std in is not impl yet.")
+        }
+    }
+
     len
 }

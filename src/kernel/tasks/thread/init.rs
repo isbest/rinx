@@ -12,6 +12,6 @@ pub(crate) fn init() -> ! {
 fn real_init() -> ! {
     loop {
         sys_sleep(500);
-        sys_write(StdFd::In, "hello");
+        sys_write(StdFd::Out, "hello");
     }
 }
